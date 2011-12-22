@@ -590,6 +590,10 @@ typedef unsigned int   meUInt ;
 #define _DEFAULT_SEARCH_PATH ""
 #endif
 
+#ifdef _WIN32
+#undef _BINFS
+#undef MEOPT_BINFS
+#endif
 #if MEOPT_BINFS
 #include "bfs.h"        /* Binary file system definitions. */
 #endif
