@@ -1,0 +1,58 @@
+/* -*- c -*-
+ *
+ * JASSPA MicroEmacs - www.jasspa.com
+ * emode.def - Definition of the modes.
+ *
+ * Copyright (C) 1998-2009 JASSPA (www.jasspa.com)
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+/*
+ * Created:     Thu Jan 15 1998
+ * Synopsis:    Definition of the modes.
+ * Authors:     Steve Philips
+ * Description:
+ *      Included by emode.h to create an ordered list of global/buffer modes.
+ *
+ * Notes:
+ *      The modes were originally defined in edef.h.
+ *      The list MUST be ordered for the message-line auto-complete to work.
+ */
+DEFMODE(MDAUTOSV, "autosv", 'a')       /* Auto-save the buffer         */
+DEFMODE(MDBACKUP, "backup", 'B')       /* Do file backup               */
+DEFMODE(MDBINARY, "binary", 'b')       /* File loaded in binary mode   */
+DEFMODE(MDCR,     "cr",     'c')       /* Save \r's on end of line     */
+DEFMODE(MDCRYPT,  "crypt",  'Y')       /* encrytion mode active        */
+DEFMODE(MDCTRLZ,  "ctrlz",  'z')       /* Save \CZ at end of file      */
+DEFMODE(MDEDIT,   "edit",   'e')       /* Changed since last write     */
+DEFMODE(MDEXACT,  "exact",  'E')       /* Exact matching for searches  */
+DEFMODE(MDFENCE,  "fence",  'f')       /* Auto display matching fence  */
+DEFMODE(MDHIDE,   "hide",   'H')       /* Buffer is hidden             */
+DEFMODE(MDINDENT, "indent", 'I')       /* indent mode                  */
+DEFMODE(MDJUST,   "justify",'J')       /* indent mode                  */
+DEFMODE(MDLF,     "lf",     'l')       /* Save \r's on end of line     */
+DEFMODE(MDLOCK,   "lock",   'L')       /* Ipipe buffer with reframe    */
+DEFMODE(MDMAGIC,  "magic",  'M')       /* regular expresions in search */
+DEFMODE(MDNACT,   "nact",   'n')       /* Buffer is not active         */
+DEFMODE(MDNARROW, "narrow", 'N')       /* Buffer has a narrowing       */
+DEFMODE(MDOVER,   "over",   'O')       /* overwrite mode               */
+DEFMODE(MDPIPE,   "pipe",   'P')       /* Buffer is an ipipe buffer    */
+DEFMODE(MDRBIN,   "rbin",   'r')       /* File loaded in reduced binary*/
+DEFMODE(MDTAB,    "tab",    'T')       /* Virtual tabs                 */
+DEFMODE(MDTIME,   "time",   't')       /* Time stamping mode           */
+DEFMODE(MDUNDO,   "undo",   'U')       /* Undo enabled                 */
+DEFMODE(MDVIEW,   "view",   'V')       /* read-only buffer             */
+DEFMODE(MDWRAP,   "wrap",   'W')       /* word wrap                    */
+

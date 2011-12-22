@@ -1,0 +1,109 @@
+/* -*- c -*-
+ *
+ * JASSPA MicroEmacs - www.jasspa.com
+ * etermcap.def - UNIX Termcap definitions.
+ *
+ * Copyright (C) 2000-2009 JASSPA (www.jasspa.com)
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+/*
+ * Created:     Mon Mar 6 2000
+ * Synopsis:    UNIX Termcap definitions.
+ * Authors:     Jon Green
+ * Description:
+ *     Included by unixterm.c to define all of the TERMCAP codes that we
+ *     use in the system in the following table. We retreive the codes
+ *     during initialisation. This table enables us to read them all in. 
+ */
+
+/* auto_left_margin/am/am/Terminal has automatic margins */
+TCAP_BOOLN(TCAPam, 'a','m','\0')
+
+/* eat_newline_glitch/xenl/xn/Newline ignored after 80 columns (Concept) */
+TCAP_BOOLN(TCAPxenl,'x','n','\0')
+
+/* columns/cols/co/Number of columns in a line */
+TCAP_DIGIT(TCAPcols, 'c','o','\0')
+
+/* lines/lines/li/Number of lines on a screen or a page */
+TCAP_DIGIT(TCAPlines, 'l','i','\0')
+
+/* move_standout_mode/msgr/ms/Safe to move in standout modes */
+TCAP_BOOLN(TCAPmsgr, 'm','s','\0')
+
+/* clear_screen/clear/cl/Clear screen and home cursor */
+TCAP_STRING(TCAPclear, 'c','l','\0')
+
+/* cursor_address/cup/cm/Move to row #1 col #2 */
+TCAP_STRING(TCAPcup, 'c','m','\0')
+
+/* exit_standout_mode/rmso/se/End standout mode */
+TCAP_STRING(TCAPrmso, 's','e','\0')
+
+/* enter_standout_mode/smso/so/Begin standout mode */
+TCAP_STRING(TCAPsmso, 's','o','\0')
+
+/* cursor_invisible/civis/vi/Make cursor invisible */
+TCAP_STRING(TCAPcivis, 'v','i','\0')
+
+/* cursor_normal/cnorm/ve/Make cursor appear normal (undo vs/vi) */
+TCAP_STRING(TCAPcnorm, 'v','e','\0')
+
+/* exit_attribute_mode/srg0/me/Turn off all attributes */
+TCAP_STRING(TCAPsgr0, 'm','e','\0')
+
+#ifdef _TCAPFONT
+/* enter_bold_mode/bold/md/Turn on bold (extra bright) mode */
+TCAP_STRING(TCAPbold, 'm','d','\0')
+
+/* enter_italics_mode/sitm/ZH/Enable italics */
+TCAP_STRING(TCAPsitm, 'Z','H','\0')
+
+/* exit_italics_mode/ritm/ZR/Disable italics */
+TCAP_STRING(TCAPritm, 'Z','R','\0')
+
+/* enter_dim_mode/dim/mh/Turn on half-bright mode */
+TCAP_STRING(TCAPdim, 'm','h','\0')
+
+/* enter_reverse_mode/rev/mr/Turn on reverse video mode */
+TCAP_STRING(TCAPrev, 'm','r','\0')
+
+/* enter_underline_mode/smul/us/Start underscore mode */
+TCAP_STRING(TCAPsmul, 'u','s','\0')
+
+/* exit_underline_mode/rmul/ue/End underscore mode */
+TCAP_STRING(TCAPrmul, 'u','e','\0')
+#endif
+
+#if MEOPT_COLOR
+/* set_a_background/setab/AB/Set background color using ANSI escape */
+TCAP_STRING(TCAPsetab, 'A','B','\0')
+
+/* set_a_foreground/setaf/AF/Set foreground color using ANSI escape */
+TCAP_STRING(TCAPsetaf, 'A','F','\0')
+
+/* orig_pair/op/op/Set default color-pair to the original one */
+TCAP_STRING(TCAPop, 'o','p','\0')
+
+/* orig_colors/oc/oc/Set all color(-pair)s to the original ones */
+TCAP_STRING(TCAPoc, 'o','c','\0')
+#endif
+
+/* exit_am_mode/rmam/RA/Turn off automatic margins */
+TCAP_STRING(TCAPrmam,'R','A','\0')
+
+/* enter_am_mode/smam/SA/Turn on automatic margins */
+TCAP_STRING(TCAPsmam,'S','A','\0')
