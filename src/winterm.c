@@ -6673,7 +6673,7 @@ TTsetBgcol (void)
         meFrameLoopContinue(loopFrame->flags & meFRAME_HIDDEN) ;
 
         if (((newBrush = CreateSolidBrush (eCellMetrics.pInfo.cPal [bcol].cpixel)) != NULL) &&
-            (SetClassLong(meFrameGetWinHandle(loopFrame), GCL_HBRBACKGROUND, (LONG)(newBrush)) != (LONG)(NULL)))
+            (SetClassLongPtr(meFrameGetWinHandle(loopFrame), GCLP_HBRBACKGROUND, (LONG)(newBrush)) != (LONG)(NULL)))
         {
             /* The new brush has been installed. Delete the old brush if we
              * have defined it and remember the old context */

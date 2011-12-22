@@ -358,6 +358,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>                    /* Standard windows API          */
+#include <direct.h>
 #ifdef _DRAGNDROP
 #include <shellapi.h>                   /* Drag and drop API             */
 #endif /* _DRAGNDROP */
