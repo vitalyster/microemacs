@@ -5,9 +5,7 @@
 /src/Makefile
 /src/*.o
 /src/me
-/config.sub
 /config.status
-/config.guess
 /config.log
 /vc10/me.suo
 /vc10/me.sdf

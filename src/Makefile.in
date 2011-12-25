@@ -177,7 +177,7 @@ key.c        line.c       macro.c      main.c       narrow.c     next.c       os
 regex.c      region.c     registry.c   search.c     spawn.c      spell.c      tag.c        time.c \
 undo.c       window.c     unixterm.c    word.c
 
-AM_LDFLAGS = -lX11 -lncurses -ltermcap
+AM_LDFLAGS = -lX11 -lncurses
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
