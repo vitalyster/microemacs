@@ -1,6 +1,6 @@
 AC_INIT([me], [1.0], [vitalyster@gmail.com])
 
-AC_PREREQ(2.68)
+AC_PREREQ(2.67)
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([1.11], [no-define])
 

@@ -3,6 +3,8 @@
 /autom4te.cache/
 /src/config.h
 /src/Makefile
+/src/*.o
+/src/me
 /config.sub
 /config.status
 /config.guess
