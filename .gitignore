@@ -1,0 +1,12 @@
+/src/.deps/
+/Makefile
+/autom4te.cache/
+/src/config.h
+/src/Makefile
+/config.sub
+/config.status
+/config.guess
+/config.log
+/vc10/me.suo
+/vc10/me.sdf
+/vc10/me.vcxproj.user
