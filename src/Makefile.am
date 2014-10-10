@@ -15,7 +15,7 @@ undo.c       window.c     word.c
 
 VTE_SRCS = unixterm.c
 
-WIN32_SRCS = winterm.c winprint.c
+WIN32_SRCS = winterm.c winprint.c me.rc
 
 if DARWIN
 me_CPPFLAGS += -D_DARWIN
@@ -33,4 +33,8 @@ if WINDOWS
 me_CPPFLAGS += $(GUI_CPPFLAGS)
 me_SOURCES += $(WIN32_SRCS)
 me_LDADD = -lgdi32 -lcomdlg32 -lwinspool
-endif 
+endif
+
+.rc.o:
+	@if $(AM_V_P); then set -x; else echo "  RC       $<"; fi
+	$(AM_V_at)@RC@ -o $@ $<

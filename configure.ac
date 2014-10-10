@@ -20,6 +20,10 @@ case $host_os in
 	;;
     *mingw*)
 	HOST_IS=windows
+	AC_CHECK_TOOL(RC, [windres], [no])
+	if test x$RC = xno; then
+	    AC_MSG_ERROR([Resource compiler not found])
+	fi
 	;;
     *) ;;
 esac
