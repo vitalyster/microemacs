@@ -1,0 +1,205 @@
+; -!- emf -!-
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 1999-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Created:     Thu Feb 18 1999
+; Synopsis:    Defines all schemes used.
+; Authors:     Steven Phillips
+;
+; Notes:
+;    set up the color scheme variables - this fixes the color scheme table
+;    so changing to different color scheme works!
+;
+0 define-macro scheme
+!emacro
+define-macro change-scheme
+    !if &not @#
+        set-variable #l0 &reg &spr "/history/%s/scheme" %platform "schemed"
+    !else
+        !force set-variable #l0 @1
+        !if &not $status
+            !if &not &exi .scheme.scheme-names
+                0 exec-file "schemes"
+            !endif
+            !if &set #l0 &lfind .scheme.scheme-files .current
+                set-variable #l0 @ml19 "Color Scheme" &lget .scheme.scheme-names #l0 .scheme.scheme-names
+            !else
+                set-variable #l0 @ml09 "Color Scheme" .scheme.scheme-names
+            !endif
+        !endif
+        !if &set #l1 &lfind .scheme.scheme-names #l0
+            set-variable #l0 &lget .scheme.scheme-files #l1
+        !endif
+    !endif
+    ; Execute the required color scheme creator macro file:
+    !force -1 exec-file #l0
+    set-variable .current #l0
+!emacro
+; The LAST color is set by .scheme.next below.
+!if &not &exi .scheme.next
+    ; Set the last color-scheme & hilight-scheme counters.
+    ; These are dangerous to reset if the file is reloaded
+    ; Note for efficiency the last is done first so (1) whole block is
+    ; malloced once and (2) $schemes can be &set before they are actually
+    ; defined.
+    ; Define the last color as a default color of white, the next macro
+    ; to define a new color will trash this one !!
+    add-color-scheme &set .scheme.next 74 0 1 0 1 1 0 1 0
+    set-variable .hilight.next 1
+!endif
+; Hilight flags: 0x01=Reformating enabled, 0x2=hilighting enabled, 0x4=function name hilighting, 0x8=constants hilighting
+set-variable .hilight.flags 3
+; Set up the standard schemes for the text, mode line message line, scroll bar and osd.
+set-variable $global-scheme     0
+set-variable $mode-line-scheme  1
+set-variable $ml-scheme         2
+set-variable $scroll-bar-scheme 3
+set-variable $trunc-scheme      4
+set-variable $osd-scheme        5
+set-variable .scheme.osd-entry  6
+set-variable .scheme.osd-ebtt   7
+set-variable .scheme.osd-dbtt   8
+set-variable .scheme.osd-title  9
+set-variable .scheme.osd-child  10
+set-variable .scheme.osd-sbar   11
+; Schemes for hkdirtre & hkdirlst
+set-variable .scheme.dir-open   12
+set-variable .scheme.dir-closed 13
+set-variable .scheme.dir-uknown 14
+; Special line hilighting schemes
+; .scheme.hide -- Hidden color
+set-variable .scheme.hide       15
+; .scheme.fold - Open & closed fold scheme
+set-variable .scheme.fold-close 16
+set-variable .scheme.fold-open  17
+; .scheme.trace -- Trace color.
+set-variable .scheme.trace      18
+; hilight line scheme
+set-variable .scheme.hlwhite    19
+set-variable .scheme.hlblack    20
+set-variable .scheme.hlred      21
+set-variable .scheme.hlgreen    22
+set-variable .scheme.hlyellow   23
+set-variable .scheme.hlblue     24
+set-variable .scheme.hlmagenta  25
+set-variable .scheme.hlcyan     26
+; Schemes colors for silly games - card games, mahjongg, matchit, metris.
+set-variable .scheme.cardback   27
+set-variable .scheme.cardfore   28
+set-variable .scheme.mjg1       29
+set-variable .scheme.mjg2       30
+set-variable .scheme.mi1        31
+set-variable .scheme.mi2        32
+set-variable .scheme.mi3        33
+set-variable .scheme.met-back   34
+set-variable .scheme.met-fore1  35
+set-variable .scheme.met-fore2  36
+;
+; Programing Language Hilighting
+; ==============================
+;
+; .scheme.prepro -- Preprocessor color
+set-variable .scheme.prepro     37
+;
+; .scheme.function -- Function definition color
+set-variable .scheme.function   38
+;
+; .scheme.comment -- Comment color
+set-variable .scheme.comment    39
+;
+; .scheme.string -- Quoted string color
+set-variable .scheme.string     40
+;
+; .scheme.quote -- Quoted character
+set-variable .scheme.quote      41
+;
+; .scheme.error -- Error hilighting color
+set-variable .scheme.error      42
+;
+; .scheme.keyword -- Primary keyword color
+; Main keywords of a language. Typically if..then..else etc. may be bold etc.
+set-variable .scheme.keyword    43
+;
+; .scheme.type -- Language type colors. Colors of the main type definitions.
+set-variable .scheme.type       44
+;
+; .scheme.operator -- Operator color. Used in languages  for keyword operators i.e. and/not/xor etc.
+set-variable .scheme.operator   45
+;
+; .scheme.variable -- Built-in Variable color
+set-variable .scheme.variable   46
+; .scheme.variable -- Constants color, e.g. numbers
+set-variable .scheme.constant   47
+;
+; Miscellaneous screens
+; =====================
+;
+; .scheme.no1 -- Primary color 1
+; Used in obscure places ie. display of binary or ascii data
+; This is the number 1 prmary color and should be legible.
+; Typically the keyword col, but no bold or other font
+; effects are applied.
+set-variable .scheme.no1        48
+; .scheme.no2 -- Secondary color 2
+set-variable .scheme.no2        49
+; .scheme.dmf -- Display matching fence
+set-variable .scheme.dmf        50
+
+; FileBrower color schemes
+; .scheme.dir -- This is the color to display directory components.
+set-variable .scheme.dir        51
+; .scheme.dir-tree -- This is the color used to display the dir tree lines
+set-variable .scheme.dir-tree   52
+; .scheme.dir-slink -- This is the color of the symbolic links.
+set-variable .scheme.dir-slink  53
+; .scheme.dir-select -- This is the directory selection color
+set-variable .scheme.dir-select 54
+; .scheme.file -- This is the color of file names
+set-variable .scheme.file       55
+; .scheme.select -- This is the file selection color
+set-variable .scheme.select     56
+;
+; Formatted Text Orientated Buffers
+; =================================
+; The following schemes are used for formated pages (i.e. Help, man, HTML) where the font
+; is supposed to be rendered in a bold or italic etc.
+;
+; .scheme.header -- Heading scheme
+set-variable .scheme.header     57
+; .scheme.link -- Scheme used for hyperlinks i.e. HTML and Help
+set-variable .scheme.link       58
+; Bold, Italic, Underline schemes & combinations of...
+set-variable .scheme.bold       59
+set-variable .scheme.italic     60
+set-variable .scheme.under      61
+set-variable .scheme.bold-italic 62
+set-variable .scheme.bold-under  63
+set-variable .scheme.italic-under 64
+set-variable .scheme.bold-italic-under 65
+; .scheme.spell-error -- Auto spell check erroneous word hilight scheme - 
+;    hilight in ME as important but ignore when printing.
+set-variable .scheme.spell-error 66
+;
+; Gdiff line schemes
+; ==================
+;
+; .scheme.gdfchange -- For ! lines
+set-variable .scheme.gdfchange  67
+; .scheme.gdfadd -- For + lines
+set-variable .scheme.gdfadd     68
+; .scheme.gdfpad -- For padded lines
+set-variable .scheme.gdfpad     69
+; .scheme.gdfsel -- For selected ! or + lines
+set-variable .scheme.gdfsel     70
+; .scheme.gdfselpad -- For selected padded lines
+set-variable .scheme.gdfselpad  71
+; .scheme.gdfrej -- For rejected ! or + lines
+set-variable .scheme.gdfrej     72
+; .scheme.gdfrejpad -- For rejected padded lines
+set-variable .scheme.gdfrejpad  73
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;>>> NOTICE: Add your last color above this line and then go back and      <<<;
+;>>>         change the .scheme.next variable to your "lastColorNumber+1". <<<;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+

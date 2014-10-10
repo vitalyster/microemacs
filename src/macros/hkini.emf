@@ -1,0 +1,53 @@
+; -!- emf -!-
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 1997-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Synopsis:    Microsoft Windows initalisation file hook.
+; Authors:     Jon Green
+;
+; Notes:       Typically used for Microsoft Windows environments
+;              primarily for the initalisation files. The syntax is
+;              slightly more liberal that a true .ini file but allows
+;              the template to be used by slightly different file formats.
+;
+; Usage:       .ini - Microsoft Windows initialisation files
+;              .hpj - Microsoft help project files.
+;
+define-macro fhook-ini
+    set-variable $buffer-mask "luh1"
+    @# buffer-init "ini"
+    buffer-init-hooks
+!emacro
+
+; buffer-init variables
+set-variable .fhook-ini.setup &reg "/history/fhook/ini" "fghiopx"
+set-variable .fhook-ini.setup-mask "aefghikmoptux"
+set-variable .fhook-ini.comment "|;||;|; | ;|r|"
+
+; setup ini file collapse
+set-variable .fhook-ini.collapse-open  "^\\["
+set-variable .fhook-ini.collapse-close "^\\[\\|\\'"
+set-variable .fhook-ini.collapse-mnext "-1"
+
+!if &and &sin "h" .fhook-ini.setup &band .hilight.flags 0x02 
+    !if &not &exist .hilight.ini
+        set-variable .hilight.ini &pinc .hilight.next 1
+    !endif
+    0 hilight .hilight.ini 0                   .scheme.keyword
+    hilight .hilight.ini 0     "/"             $global-scheme
+    hilight .hilight.ini 2     "="             $global-scheme
+    hilight .hilight.ini 0     ":="            $global-scheme
+    hilight .hilight.ini 2     "#"             .scheme.comment  ; Comment from SOL to EOL.
+    hilight .hilight.ini 0x102 ";"             .scheme.comment  ; Comment from SOL to EOL.
+    ; Obscure file format extensions
+    hilight .hilight.ini 2     "//"            .scheme.comment  ; Comment to EOL.
+    hilight .hilight.ini 20    "\\[" "]" ""    .scheme.string
+    hilight .hilight.ini 1     "ROOT"          .scheme.variable
+    hilight .hilight.ini 1     "USER"          .scheme.variable
+    hilight .hilight.ini 1     "LOCAL"         .scheme.variable
+    hilight .hilight.ini 1     "CURRENT"       .scheme.variable
+!endif
+
+buffer-init-fhook "ini"
+

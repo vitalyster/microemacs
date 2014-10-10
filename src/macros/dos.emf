@@ -1,0 +1,42 @@
+; -!- emf -!-
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 1995-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Synopsis:    Setup file for MS-DOS boxes
+; Authors:     Steven Phillips
+;
+0 define-macro exec-me
+    pipe-shell-command &spr "%s %s" $progname @1 @mna
+!emacro
+; Setup the screen resolution
+define-macro reset-25
+    change-font "3" "0"
+!emacro
+define-macro reset-50
+    change-font "3" "1"
+!emacro
+define-macro reset-def
+    !if &seq $TERM "E80x50"
+        reset-50
+    !elif &seq $TERM "E80x25"
+        reset-25
+    !else    
+        change-font &reg &spr "/history/%s/font" %platform "3" &reg &spr "/history/%s/font-dbl" $platform "1"
+    !endif
+!emacro
+global-bind-key reset-25  "C-c 2"
+global-bind-key reset-50  "C-c 5"
+global-bind-key reset-def "C-c 9"
+reset-def
+; setup the next-error stuff including grep and compiling
+set-variable $line-template "[0-9]+"
+set-variable $file-template "[a-zA-Z:]*[0-9a-zA-Z\\\\/_.]+"
+set-variable %xgrep-com "grep /n"
+; These definitions are for dos grep & djgpp gcc compiler
+add-next-line "*grep*" "%f: %l:"
+0 add-next-line "*compile*"
+add-next-line "*compile*" "%f(%l): Error"
+add-next-line "*compile*" "%f(%l): Warn"
+add-next-line "*compile*" "%f:%l:"
+

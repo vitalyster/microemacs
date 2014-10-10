@@ -1,0 +1,34 @@
+; -!- emf -!-
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 1998-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Created:     Sat Jul 18 1998
+; Synopsis:    Games wrapper file to keep me.emf small
+; Authors:     Steven Phillips
+;
+define-macro cross-word
+    execute-file crosswd
+    cross-word
+!emacro
+define-macro Mahjongg
+    execute-file mahjongg
+    Mahjongg
+!emacro
+define-macro Match-It
+    execute-file matchit
+    Match-It
+!emacro
+define-macro Metris
+    execute-file metris
+    Metris
+!emacro
+define-macro Patience
+    execute-file patience
+    Patience
+!emacro
+define-macro Triangle
+    execute-file triangle
+    Triangle
+!emacro
+

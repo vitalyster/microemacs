@@ -1,0 +1,121 @@
+; -!- emf -!-
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 1996-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Synopsis:    Setup file for Microsoft Windows.
+; Authors:     Jon Green
+;
+; Notes on the standard configuration
+; ===================================
+;
+; The "Terminal" font is the standard DOS font used
+; for the DOS window. This is an OEM fixed width
+; character set which contains all of the conventional
+; symbols found in the DOS shell.
+;
+; The fonts are the same as shown in the DOS window the
+; last 2 arguments are the width x height, the terminal
+; equivelents (Bit Mapped) are commented here.
+;
+; 8x8  regular weight seems to offer the best resolution
+;      for 14/15" monitors.
+;
+; 7x12 A good replacement for 8x8 if it is not operating
+;      correctly !!.
+;
+; 6x8  regular weight is more suitable for 17-21" monitors
+;      which offer better resolutions.
+;
+; Standard Terminal Fonts - standard weight use  0 4
+; Standard Terminal Fonts - heavy weight use     0 7
+!if &band $system 0x01
+    ; using a console interface
+!else
+    ; using our own window
+    set-variable #l0 &reg &spr "/history/%s/font" $platform ""
+    set-variable #l1 .change-font.type
+    set-variable #l2 &reg &spr "/history/%s/font-weight" $platform "0"
+    set-variable #l3 &reg &spr "/history/%s/font-width" $platform "0"
+    set-variable #l4 &reg &spr "/history/%s/font-depth" $platform "0"
+    1 change-font #l0 #l1 #l2 #l3 #l4
+!endif
+0 define-macro exec-me
+    ipipe-shell-command &spr "\"%s\" %s" $progname @1 @mna
+!emacro
+; Add A-f4 as an exit binding
+global-bind-key save-buffers-exit-emacs "A-f4"
+;
+; Setup the get-next-line stuff for grep and compiling
+;
+set-variable $line-template "[0-9]+"
+set-variable $file-template "[a-zA-Z]:[-0-9a-zA-Z\\\\/_.~]+\\|[-0-9a-zA-Z\\\\/_.~]+"
+set-variable %xgrep-com "grep -n"
+add-next-line "*grep*" "%f: %l:"
+; These definitions are for the Microsoft MSCV 2.0+ compiler
+set-variable %compile-com "nmake "
+0 add-next-line "*compile*"
+add-next-line "*compile*" "%f(%l) : \\(fatal error\\|error\\|warning\\)"
+add-next-line "*compile*" "%f:%l:"
+; Load additional hooks required for win32.
+define-macro-file hkipipe ishell perldb
+;--- COMSHELL
+; As command.com's prompt echoing is broken ishell is useless without
+; the following 2 variables which enable ME's command-line support
+; NOTE - if you use a different prompt (i.e. not "PATH>") then you
+; must configure .ishell.prompt appropriately
+set-variable .ishell.prompt "^[^>\n]*>"
+set-variable .ishell.noecho "1"
+;--- CYGWIN
+; Try to find cygwin automatically.
+!if &not &exi %cygwin-path
+    !if &seq "D" &stat "t" "c:/cygwin"
+        set-variable %cygwin-path "c:/cygwin"
+        !if &not &exi $INFOPATH
+            set-variable $INFOPATH &cat %cygwin-path "/usr/share/info"
+        !endif
+    !endif
+!endif
+; Define the cygwin dummy macro. This reports an error if the cygwin environment
+; has not been defined in the user start-up file.
+define-macro cygwin
+    !if &seq %cygwin-path "ERROR"
+        ; Bitch if the environment is not defined.
+        5000 ml-write "[Error: %cygwin-path not set - see hkcygwin.emf]"
+        !abort
+        ; See if bash exists.
+    !elif &seq "R" &stat "t" &cat %cygwin-path "/bin/bash.exe"
+        ; Load the macro file and execute the cygwin session.
+        !force exec-file "hkcygwin"
+        !if $status
+            cygwin
+        !endif
+    !else
+        5000 ml-write &spr "[Error: Cannot find bash program. %s]" &cat %cygwin-path "/bin/bash.exe"
+        !abort
+    !endif
+!emacro
+; Define a dummy man macro. This reports an error if the cygwin environment
+; has not been defined in the user start-up file.
+define-macro man
+    !if &not &exi %man-com
+        !if &seq %cygwin-path "ERROR"
+            ; Bitch if the environment is not defined.
+            5000 ml-write "[Error: %cygwin-path not set - see hkcygwin.emf]"
+            !abort
+            ; See if the max.exe file exists.
+        !elif &seq "R" &stat "t" &cat %cygwin-path "/bin/man.exe"
+            ; Load the macro file and execute the man file
+            set-variable %man-com &cat %cygwin-path "/bin/man.exe"
+        !else
+            5000 ml-write "[Error: Cannot find man program.]"
+            !abort
+        !endif
+    !endif
+    !force exec-file "hkman"
+    !if $status
+        man
+    !endif
+!emacro
+; Bind the windows Menu key to the context menu.
+global-bind-key context-menu "menu"

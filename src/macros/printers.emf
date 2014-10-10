@@ -1,0 +1,16 @@
+; -!- emf -!-
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 2000-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Created:     Tue May 23 2000
+; Synopsis:    List of printer drivers and schemes
+; Authors:     Steven Phillips
+;
+; Setup the Print drivers
+set-variable .print-setup.driver-names "|Default Plain Text|HTML|Windows|HP Deskjet|HP Laserjet 4v|Epson Stylus|"
+set-variable .print-setup.driver-files "|printd|printhtm|printwdw|printhpd|printhpl|printeps|"
+; Setup the Print Schemes
+set-variable .print-setup.scheme-names "|Default Plain Text|Use fonts|Epson ESC/P Color|"
+set-variable .print-setup.scheme-files "|printd|printf|printepc|"
+

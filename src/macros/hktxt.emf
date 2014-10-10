@@ -1,0 +1,25 @@
+; -!- emf -!-
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 2000-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Created:     Mon Mar 20 2000
+; Synopsis:    text file hook
+; Authors:     Jon Green
+;
+; Notes:       See docmacro.emf for documentation
+;
+define-macro fhook-txt
+    ; use the document fhook in docmacro
+    @# doc-fhook-body "txt" "text"
+!emacro
+
+; buffer-init variables
+set-variable .fhook-txt.name "Text"
+set-variable .fhook-txt.setup &reg "/history/fhook/txt" "gijopsw"
+set-variable .fhook-txt.setup-mask "aefghijkmnopstuwx"
+
+; load docmacro.emf passing the doc setup flags
+execute-file "docmacro" "txt"
+
+buffer-init-fhook "txt"

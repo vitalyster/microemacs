@@ -1,0 +1,57 @@
+; -!- emf -!-
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 2003-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Created      Thu Oct 16 2003
+; Synopsis:    ASP Hook File
+; Authors:     Steven Phillips
+;
+define-macro fhook-asp
+    set-variable $buffer-mask "luh1"
+    @# buffer-init "asp"
+    buffer-init-hooks
+!emacro
+
+; buffer-init variables
+set-variable .fhook-asp.name "ASP"
+set-variable .fhook-asp.setup &reg "/history/fhook/asp" "cdfghinopsx"
+set-variable .fhook-asp.setup-mask "acdefghikmnopstux"
+set-variable .fhook-asp.command-flag  "|"
+set-variable .fhook-asp.command-name  "|"
+set-variable .fhook-asp.command-nbind "|"
+set-variable .fhook-asp.command-kbind "|"
+set-variable .fhook-asp.command-desc  "|"
+set-variable .fhook-asp.indent-width 2
+
+; load in the html core
+!force execute-file "htmlcore" "asp" 
+
+; add the <% %> vb script support
+!if &and &sin "h" .fhook-asp.setup &band .hilight.flags 0x02 
+    hilight .hilight.asptag 4 "=\\{[^ \t\n<>]*<%" "%>[^ \t\n>]*" ""  .scheme.string
+    hilight .hilight.asptag 4 "=\\{\"[^\"\n<]*<%" "%>[^\"]*\"" ""  .scheme.string
+    !if &exist .hilight.vbscript
+        hilight .hilight.asp      0x80 "<%" .hilight.vbscript .scheme.prepro
+        hilight .hilight.asp      0xa0 "End If$" .hilight.vbscript .scheme.keyword
+        hilight .hilight.asp      0xa0 "End Function$" .hilight.vbscript .scheme.keyword
+        hilight .hilight.asp      0xa0 "End Sub$" .hilight.vbscript .scheme.keyword
+        hilight .hilight.asptag   0x80 "<%" .hilight.vbscript .scheme.prepro
+        hilight .hilight.vbscript 0x80 "%>" 0 .scheme.prepro
+    !endif
+!endif
+!if &sin "d" .fhook-asp.setup
+    !if &exist .indent.vbscript
+        indent .hilight.asptag t "<%" .indent.vbscript
+        indent .hilight.asptag t "[\t ]*End If$" .hilight.vbscript
+        indent .hilight.asptag t "[\t ]*End Function$" .hilight.vbscript
+        indent .hilight.asptag t "[\t ]*End Sub$" .hilight.vbscript
+        indent .hilight.asptag t "%>" .hilight.asp
+        
+        indent .hilight.asp x "^<%" 0 .indent.vbscript
+        indent .hilight.asp x ".<%" t .indent.vbscript
+        indent .indent.vbscript w "%>" -t 0
+    !endif
+!endif
+
+buffer-init-fhook "asp"

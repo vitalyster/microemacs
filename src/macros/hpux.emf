@@ -1,0 +1,21 @@
+; -!- emf -!-
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 1995-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Synopsis:    Setup file for HPUX boxes.
+; Authors:     Steven Phillips
+;
+; Load up common unix stuff
+!force exec-file "unixterm"
+;
+; Compile stuff
+0 add-next-line "*compile*"
+add-next-line "*compile*" "cc: \"\\.\\./%f\", line %l"
+add-next-line "*compile*" "cpp: \"\\.\\./%f\", line %l"
+add-next-line "*compile*" "cc: \"%f\", line %l"
+add-next-line "*compile*" "cpp: \"%f\", line %l"
+add-next-line "*compile*" "Warning \\d+: \"%f\", line %l"
+add-next-line "*compile*" "%f:%l:"
+
+

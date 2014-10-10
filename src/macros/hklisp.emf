@@ -1,0 +1,47 @@
+; -!- emf -!-
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 1999-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Synopsis:    lisp hook - invoked when a lisp file is loaded.
+; Authors:     Steven Phillips
+;
+set-char-mask "2" "-$&#!%:@."
+
+define-macro fhook-lisp
+    set-variable $buffer-mask "luh1"
+    @# buffer-init "lisp"
+    buffer-init-hooks
+!emacro
+
+; buffer-init variables
+set-variable .fhook-lisp.setup &reg "/history/fhook/lisp" "dghiopx"
+set-variable .fhook-lisp.setup-mask "adeghikmoptux"
+set-variable .fhook-lisp.comment "|;||;|; | ;|r|"
+set-variable .fhook-lisp.indent-width 2
+
+!if &not &exist .hilight.lisp
+    set-variable .hilight.lisp &pinc .hilight.next 1
+!endif
+
+!if &and &sin "h" .fhook-lisp.setup &band .hilight.flags 0x02 
+    0 hilight .hilight.lisp 2 50                     $global-scheme
+    hilight .hilight.lisp 0x804  "\"" "\"" "\\"      .scheme.string
+    hilight .hilight.lisp 20 "#|" "|#" ""            .scheme.comment
+    hilight .hilight.lisp 2  ";"                     .scheme.comment
+    hilight .hilight.lisp 1  "^\\s*(\\{defvar"       .scheme.variable
+    hilight .hilight.lisp 1  "^\\s*(\\{defconst"     .scheme.variable
+    hilight .hilight.lisp 1  "^\\s*(\\{defun"        .scheme.keyword
+!endif
+
+!if &sin "d" .fhook-lisp.setup
+    0 indent  .hilight.lisp 0 10
+    indent .hilight.lisp n "(" t
+    indent .hilight.lisp o ")" -t
+    indent .hilight.lisp i ";"
+    indent .hilight.lisp e "\"" "\"" "\\"
+    indent .hilight.lisp e "#|" "|#" ""
+    indent .hilight.lisp i ";"
+!endif
+
+buffer-init-fhook "lisp"

@@ -1,0 +1,42 @@
+/* -*- C -*- ****************************************************************
+ *
+ *  System        : 
+ *  Module        : 
+ *  Object Name   : $RCSfile$
+ *  Revision      : $Revision$
+ *  Date          : $Date$
+ *  Author        : $Author$
+ *  Created By    : $USER_NAME$
+ *  Created       : $ASCII_TIME$
+ *  Last Modified : <090829.1747>
+ *
+ *  Description	
+ *
+ *  Notes
+ *
+ *  History
+ *	
+ ****************************************************************************
+ *
+ *  Copyright (c) $YEAR$ $COMPANY_NAME$.
+ * 
+ *  All Rights Reserved.
+ * 
+ * This  document  may  not, in  whole  or in  part, be  copied,  photocopied,
+ * reproduced,  translated,  or  reduced to any  electronic  medium or machine
+ * readable form without prior written consent from $COMPANY_NAME$.
+ *
+ ****************************************************************************/
+
+#ifndef __$BUFFER_NAME$
+#define __$BUFFER_NAME$
+
+#if defined(__cplusplus) || defined(c_plusplus)
+extern "C" {
+#endif
+$CURSOR$
+
+#if defined(__cplusplus) || defined(c_plusplus)
+}
+#endif
+#endif /* __$BUFFER_NAME$ */
