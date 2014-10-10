@@ -1,8 +1,10 @@
 bin_PROGRAMS = me
 
-me_CPPFLAGS = -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_ME_WINDOW -D_ME_CONSOLE
+me_CPPFLAGS = -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_ME_CONSOLE
 
 LINUX_CPPFLAGS = -D_LINUX -D_LINUX26
+
+GUI_CPPFLAGS = -D_ME_WINDOW
 
 me_SOURCES = abbrev.c     basic.c bind.c       buffer.c     crypt.c      dirlist.c termio.c\
     display.c \
@@ -15,13 +17,20 @@ VTE_SRCS = unixterm.c
 
 WIN32_SRCS = winterm.c winprint.c
 
+if DARWIN
+me_CPPFLAGS += -D_DARWIN
+me_SOURCES += $(VTE_SRCS)
+me_LDADD = -lncurses
+endif
+
 if LINUX
-me_CPPFLAGS += $(LINUX_CPPFLAGS)
+me_CPPFLAGS += $(LINUX_CPPFLAGS) $(GUI_CPPFLAGS)
 me_SOURCES += $(VTE_SRCS)
 me_LDADD = -lX11 -lncurses
 endif
 
 if WINDOWS
+me_CPPFLAGS += $(GUI_CPPFLAGS)
 me_SOURCES += $(WIN32_SRCS)
 me_LDADD = -lgdi32 -lcomdlg32 -lwinspool
 endif 
