@@ -3857,7 +3857,7 @@ TTchangeFont (meUByte *fontName, int fontType, int fontWeight,
     memset (&logfont, 0, sizeof (LOGFONT));
     logfont.lfWeight = FW_DONTCARE;
     logfont.lfClipPrecision = CLIP_DEFAULT_PRECIS;
-    logfont.lfQuality = DRAFT_QUALITY;
+    logfont.lfQuality = DEFAULT_QUALITY;
     logfont.lfPitchAndFamily = FIXED_PITCH|FF_DONTCARE;
 
     if (fontType != -1)
@@ -5908,7 +5908,7 @@ WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmd
     {
         WNDCLASS  wc;
 
-        wc.style = 0;
+        wc.style = CS_HREDRAW | CS_VREDRAW;
         wc.lpfnWndProc = (WNDPROC) MainWndProc;
         wc.cbClsExtra = 0;
         wc.cbWndExtra = 0;
