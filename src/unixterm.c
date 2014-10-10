@@ -2987,6 +2987,7 @@ XTERMsetFont(char *fontName)
          * upright fonts. */
         char *altFonts[] =
         {
+            "fixed",
             "-*-clean-medium-r-*-*-*-130-*-*-*-*-iso8859-1",
             "-*-clean-medium-r-*-*-*-130-*-*-*-*-iso8859-*",
             "-*-fixed-medium-r-*-*-*-120-*-*-*-*-iso8859-*",
