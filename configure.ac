@@ -2,7 +2,7 @@ AC_INIT([me], [1.0], [vitalyster@gmail.com])
 
 AC_PREREQ(2.67)
 AC_CANONICAL_HOST
-AM_INIT_AUTOMAKE([foreign subdir-objects])
+AM_INIT_AUTOMAKE([1.12 foreign subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES(yes)])
 
 AC_CONFIG_HEADERS([src/config.h])
