@@ -1,0 +1,453 @@
+; -!- emf -!-
+; EXPERIMENTAL ****
+; fhook definition for golang (www.golang.org)
+; By Russ Magee, Aug 2015, derived from hkc.emf
+; ---
+;
+; This is part of the JASSPA MicroEmacs macro files
+; Copyright (C) 1997-2009 JASSPA (www.jasspa.com)
+; See the file me.emf for copying and conditions.
+;
+; Synopsis:    Go hook - invoked when a .go file is loaded.
+; Authors:     Russ Magee (based on hkc.emf by Steven Phillips & Jon Green)
+;
+; Notes:
+;       There is a distinction between C++ and C because of problems with
+;       hilighting. ".cpp", ".cc" and ".hpp" are assumed to be C++ files.
+;       Also recognise magic-string for C++ as:- "-!- cmode; c++ -!-" in
+;       the first line.
+;
+define-macro fhook-go
+    ; Is it an include h file or a c file?
+    set-variable #l0 &isin ".go" $buffer-bname "go"
+    set-variable $buffer-mask "luh1"
+    @# buffer-init "go" #l0
+    buffer-init-hooks
+!emacro
+
+; buffer-init variables
+set-variable .fhook-go.setup &reg "/history/fhook/go" "bdfghnopxlqv"
+set-variable .fhook-go.setup-mask "abdefghikmnoptuxclqrvy"
+set-variable .fhook-go.tags "ctags"
+
+; Comments
+set-variable .fhook-go.comment "|/*| */|*| * | * |fr|"
+; Doxygen comment - //!< ... member detailed text ...
+;                   //!< ... member detailed text ...
+set-variable .fhook-go.comment-1 "|//!<|||//!< |||"
+; Doxygen comment - //! ... text ...
+;                   //! ... text ...
+set-variable .fhook-go.comment-2 "|//!|||//! |||"
+; Doxygen comment - ///< ... text ...
+;                   ///< ... text ...
+set-variable .fhook-go.comment-3 "|///<||/|///< | ///||"
+; Doxygen comment - /// ... text ...
+;                   /// ... text ...
+set-variable .fhook-go.comment-4 "|///||/|/// | ///||"
+; Doxygen comment - /**< ... member detailed text ...
+;                    *   ... member detailed text ... */
+set-variable .fhook-go.comment-5 "|/**<| */|*| *   | * |f|"
+; Doxygen comment - /*!< ... member detailed text ...
+;                    *   ... member detailed text ... */
+set-variable .fhook-go.comment-6 "|/*!<| */|*| *   | * |f|"
+; Doxygen comment - /** ... detailed text ...
+;                    *  ... detailed text ... */
+set-variable .fhook-go.comment-7 "|/**| */|*| * | * |f|"
+; Fancy C - /*
+;           ** Comment
+;           */
+set-variable .fhook-go.comment-8 "|/*|*/|*|** | * |f|"
+; Fancy C - /*
+;           ** Comment
+;            */
+set-variable .fhook-go.comment-9 "|/*| */|*|** | * |f|"
+; Fancy C - /*\
+;            * Comment
+;           \*/
+set-variable .fhook-go.comment-10 "|/*\\|\\*/|*| * | * |f|"
+; Standard comment - We repeat here incase the default comment style is
+; over-ridden.
+; Standard C - /*
+;               * ... comment ...
+;               */
+set-variable .fhook-go.comment-11 "|/*| */|*| * | * |f|"
+; Standard C++ comment.
+set-variable .fhook-go.comment-12 "|//||/|// | //||"
+
+; Commands
+set-variable .fhook-go.command-flag  "|t|th|th|th|t|t|t|t|t|t|"
+set-variable .fhook-go.command-name  "|c-to-cpp-convert||c-slashify|c-deslashify||c-hash-set-define|c-hash-unset-define|c-hash-eval|c-hash-eval|c-hash-del|"
+set-variable .fhook-go.command-nbind "|||||||||1||"
+set-variable .fhook-go.command-kbind "|||||||||||"
+set-variable .fhook-go.command-desc  "|Convert to C\H++||Slashify region|Deslashify region||\HSet #define|\HUnset #define|Evaluate \H#'s|Evaluate #'s use \HNarrow|\HRemove # evaluation|"
+
+; Set up collapse for C
+set-variable .fhook-go.collapse-open  "^{"
+set-variable .fhook-go.collapse-close "^}"
+set-variable .fhook-go.collapse-mopen  "-1"
+set-variable .fhook-go.collapse-mclose "1"
+set-variable .fhook-go.collapse-mnext "-1"
+
+; Set up menu items for C mode.
+set-variable .fhook-go.setup-flags   "|c|l|q|r|v|y|"
+set-variable .fhook-go.setup-labels  "|JASSPA type highlighting|Doxygen highlighting|<stdint.h> hilighting|Brace highlighting|Bad C highlighting|GNU Indent Style (Set Indent Width=2)|"
+
+;!; setup item-list
+;!set-variable .fhook-go.item-list-s1 "^\\(static[ \t]+\\|extern[ \t]+\\)?\\(const[ \t]+\\)?\\(union[ \t]+\\)?\\(struct[ \t]+\\)?\\(\\w+[\\* \\t]+\\)?\\(\\w+\\)[ \t]*("
+;!set-variable .fhook-go.item-list-r1 "Func \ecB\\6\ecA"
+;!set-variable .fhook-go.item-list-s2 "^[ \t]*#[ \t]*define[ \t]+\\(\\w+\\)"
+;!set-variable .fhook-go.item-list-r2 "Defn \ecB\\1\ecA"
+;!set-variable .fhook-go.item-list-s3 "^[ \t]*typedef[ \t]+\\w+[ \t]+\\(\\w+\\)[ \t];"
+;!set-variable .fhook-go.item-list-r3 "Type \ecB\\1\ecA"
+;!set-variable .fhook-go.item-list-s4 "^[ \t]*typedef[ \t]+struct[ \t]+\\(\\w+\\)[ \t]*{"
+;!set-variable .fhook-go.item-list-r4 "Type \ecB\\1\ecA"
+;!set-variable .fhook-go.item-list-s5 "^}[ \t]*\\(\\w+\\)\\([ \t]*,.*\\)?[ \t]*;"
+;!set-variable .fhook-go.item-list-r5 "Type \ecB\\1\ecA"
+;!; Added cpp class support as header files are often mis-identified as C headers
+;!set-variable .fhook-go.item-list-s6 "^[ \t]*class[ \t]+\\(\\w+\\)\\([ \t]+:\\|[ \t]*{\\|[ \t]*$\\)"
+;!set-variable .fhook-go.item-list-r6 "Clss \ecB\\1\ecA"
+
+!if &not &exi .hilight.go
+    set-variable .hilight.go &pinc .hilight.next 1
+!endif
+!if &and &sin "h" .fhook-go.setup &band .hilight.flags 0x02
+    ; Hi-light C Mode
+    0 hilight .hilight.go  2 50
+    ; comments, strings and quotes
+    hilight .hilight.go 0x3a "#" "\\"       .scheme.prepro
+    hilight .hilight.go   20 "/\\*" "*/" "" .scheme.comment
+    ; the following is strictly C++ commenting - but people don't seem to know the difference
+    hilight .hilight.go    2 "//"           .scheme.comment
+    hilight .hilight.go    4 "\"" "\"" "\\" .scheme.string
+    hilight .hilight.go    0 "'.'"          .scheme.quote
+    hilight .hilight.go    0 "'\\\\.'"      .scheme.quote
+    hilight .hilight.go    0 "'\\\\'"       .scheme.error
+    hilight .hilight.go    0 "'\\\\''"      .scheme.quote
+    ; Hilight TODO in a comment - Examples
+    ; i.e. /* TODO I need to do this */
+    ; i.e. // TODO I need to do this */
+    hilight .hilight.go   20 "/\\*\\s*[tT][oO][dD][oO]" "*/" "" .scheme.error
+    hilight .hilight.go   18 "//\\s*[tT][oO][dD][oO]"           .scheme.error
+    ; Function names and goto labels
+    !if &band .hilight.flags 0x04
+        hilight .hilight.go    0 "^\\w+\\}\\s(" .scheme.function
+        hilight .hilight.go    0 "^\\w+\\}(" .scheme.function
+    !endif
+    hilight .hilight.go    0 "^\\w+\\}:"    .scheme.link
+    ; keywords
+    hilight .hilight.go    1 "break"        .scheme.keyword
+    hilight .hilight.go    1 "case"         .scheme.keyword
+    hilight .hilight.go    1 "continue"     .scheme.keyword
+    hilight .hilight.go    1 "default"      .scheme.keyword
+    hilight .hilight.go    1 "else"         .scheme.keyword
+    hilight .hilight.go    1 "for"          .scheme.keyword
+    hilight .hilight.go    1 "func"         .scheme.keyword
+    hilight .hilight.go    1 "if"           .scheme.keyword
+    hilight .hilight.go    1 "import"       .scheme.keyword
+    hilight .hilight.go    1 "package"      .scheme.keyword
+    hilight .hilight.go    1 "return"       .scheme.keyword
+    hilight .hilight.go    1 "switch"       .scheme.keyword
+    ; tokens
+    hilight .hilight.go    1 "char"         .scheme.type
+    hilight .hilight.go    1 "const"        .scheme.type
+    hilight .hilight.go    1 "double"       .scheme.type
+    hilight .hilight.go    1 "float"        .scheme.type
+    hilight .hilight.go    1 "float64"      .scheme.type
+    hilight .hilight.go    1 "float128"     .scheme.type
+    hilight .hilight.go    1 "int"          .scheme.type
+    hilight .hilight.go    1 "long"         .scheme.type
+    hilight .hilight.go    1 "uint8"           .scheme.type
+    hilight .hilight.go    1 "int8"            .scheme.type
+    hilight .hilight.go    1 "uint16"          .scheme.type
+    hilight .hilight.go    1 "int16"           .scheme.type
+    hilight .hilight.go    1 "uint32"          .scheme.type
+    hilight .hilight.go    1 "int32"           .scheme.type
+    hilight .hilight.go    1 "uint64"          .scheme.type
+    hilight .hilight.go    1 "int64"           .scheme.type
+    hilight .hilight.go    1 "complex"         .scheme.type
+
+;!    hilight .hilight.go    1 "register"     .scheme.type
+;!    hilight .hilight.go    1 "short"        .scheme.type
+;!    hilight .hilight.go    1 "signed"       .scheme.type
+    hilight .hilight.go    1 "size_t"       .scheme.type
+;!    hilight .hilight.go    1 "static"       .scheme.type
+    hilight .hilight.go    1 "struct"       .scheme.type
+    hilight .hilight.go    1 "type"         .scheme.type
+    hilight .hilight.go    1 "union"        .scheme.type
+;!    hilight .hilight.go    1 "unsigned"     .scheme.type
+;!    hilight .hilight.go    1 "void"         .scheme.type
+;!    hilight .hilight.go    1 "volatile"     .scheme.type
+;!    hilight .hilight.go    1 "wchar"        .scheme.type
+    ; Add some system types
+    hilight .hilight.go    1 "FILE"         .scheme.type
+    ; Pre-processor directives
+    hilight .hilight.go    1 "__DATE__"     .scheme.prepro
+    hilight .hilight.go    1 "__FILE__"     .scheme.prepro
+    hilight .hilight.go    1 "__LINE__"     .scheme.prepro
+    hilight .hilight.go    1 "__STDC__"     .scheme.prepro
+    hilight .hilight.go    1 "__TIME__"     .scheme.prepro
+    hilight .hilight.go    1 "NULL"         .scheme.prepro
+    !if &band .hilight.flags 0x08
+        ; hilight.goonstants, e.g. numbers
+        hilight .hilight.go 1 "\\d+"           .scheme.constant
+        hilight .hilight.go 1 "-\\d+"          .scheme.constant
+        hilight .hilight.go 1 "0[xX]\\h+"      .scheme.constant
+        hilight .hilight.go 1 "\\d+\\.\\d+"    .scheme.constant
+        hilight .hilight.go 1 "-\\d+\\.\\d+"   .scheme.constant
+        hilight .hilight.go 1 "\\d+\\.\\d+f"   .scheme.constant
+        hilight .hilight.go 1 "-\\d+\\.\\d+f"  .scheme.constant
+    !endif
+
+    ; JASSPA MicroEmacs specific tokens for source editing. This is a special
+    ; flag for 'C', see .fhook-go.setup-flags and .fhook-go.setup-labels above.
+    ; The hilighting is enabled through the major mode setup flags, set via
+    ; "M-x major-mode-setup" or Help -> Major Mode Setup
+    !if &sin "c" .fhook-go.setup
+        hilight .hilight.go 0x200 "me"
+        hilight .hilight.go 1 "meTRUE"         .scheme.prepro
+        hilight .hilight.go 1 "meFALSE"        .scheme.prepro
+        hilight .hilight.go 1 "meABORT"        .scheme.prepro
+        hilight .hilight.go 1 "meSTOP"         .scheme.prepro
+        hilight .hilight.go 1 "mePLAY"         .scheme.prepro
+        hilight .hilight.go 1 "meRECORD"       .scheme.prepro
+        hilight .hilight.go 1 "meIDLE"         .scheme.prepro
+        hilight .hilight.go 1 "meBUF_SIZE_MAX" .scheme.prepro
+        hilight .hilight.go 1 "meBIND_MAX"     .scheme.prepro
+        hilight .hilight.go 1 "meKILL_MAX"     .scheme.prepro
+        hilight .hilight.go 1 "MWABORT"        .scheme.prepro
+        hilight .hilight.go 1 "MWCLEXEC"       .scheme.prepro
+        hilight .hilight.go 1 "MWPAUSE"        .scheme.prepro
+        hilight .hilight.go 1 "meByte"         .scheme.type
+        hilight .hilight.go 1 "meUByte"        .scheme.type
+        hilight .hilight.go 1 "meShort"        .scheme.type
+        hilight .hilight.go 1 "meUShort"       .scheme.type
+        hilight .hilight.go 1 "meInt"          .scheme.type
+        hilight .hilight.go 1 "meUInt"         .scheme.type
+        hilight .hilight.go 1 "meAbbrev"       .scheme.type
+        hilight .hilight.go 1 "meAnchor"       .scheme.type
+        hilight .hilight.go 1 "meBind"         .scheme.type
+        hilight .hilight.go 1 "meBuffer"       .scheme.type
+        hilight .hilight.go 1 "meColor"        .scheme.type
+        hilight .hilight.go 1 "meCommand"      .scheme.type
+        hilight .hilight.go 1 "meDictAddr"     .scheme.type
+        hilight .hilight.go 1 "meDictWord"     .scheme.type
+        hilight .hilight.go 1 "meDictionary"   .scheme.type
+        hilight .hilight.go 1 "meDirList"      .scheme.type
+        hilight .hilight.go 1 "meFiletime"     .scheme.type
+        hilight .hilight.go 1 "meFrame"        .scheme.type
+        hilight .hilight.go 1 "meFrameLine"    .scheme.type
+        hilight .hilight.go 1 "meHilight"      .scheme.type
+        hilight .hilight.go 1 "meIPipe"        .scheme.type
+        hilight .hilight.go 1 "meKill"         .scheme.type
+        hilight .hilight.go 1 "meKillNode"     .scheme.type
+        hilight .hilight.go 1 "meLine"         .scheme.type
+        hilight .hilight.go 1 "meMacro"        .scheme.type
+        hilight .hilight.go 1 "meMode"         .scheme.type
+        hilight .hilight.go 1 "meNamesList"    .scheme.type
+        hilight .hilight.go 1 "meNarrow"       .scheme.type
+        hilight .hilight.go 1 "mePosition"     .scheme.type
+        hilight .hilight.go 1 "meRegNode"      .scheme.type
+        hilight .hilight.go 1 "meRegex"        .scheme.type
+        hilight .hilight.go 1 "meRegexClass"   .scheme.type
+        hilight .hilight.go 1 "meRegexDouble"  .scheme.type
+        hilight .hilight.go 1 "meRegexGroup"   .scheme.type
+        hilight .hilight.go 1 "meRegexItem"    .scheme.type
+        hilight .hilight.go 1 "meRegion"       .scheme.type
+        hilight .hilight.go 1 "meRegister"     .scheme.type
+        hilight .hilight.go 1 "meSCROLLBAR"    .scheme.type
+        hilight .hilight.go 1 "meScheme"       .scheme.type
+        hilight .hilight.go 1 "meSelection"    .scheme.type
+        hilight .hilight.go 1 "meSpellRule"    .scheme.type
+        hilight .hilight.go 1 "meStat"         .scheme.type
+        hilight .hilight.go 1 "meStyle"        .scheme.type
+        hilight .hilight.go 1 "meUndoNode"     .scheme.type
+        hilight .hilight.go 1 "meVarList"      .scheme.type
+        hilight .hilight.go 1 "meVariable"     .scheme.type
+        hilight .hilight.go 1 "meVideo"        .scheme.type
+        hilight .hilight.go 1 "meVideoLine"    .scheme.type
+        hilight .hilight.go 1 "meWindow"       .scheme.type
+        hilight .hilight.go 1 "osdITEM"        .scheme.type
+        hilight .hilight.go 1 "osdDIALOG"      .scheme.type
+        hilight .hilight.go 1 "osdCHILD"       .scheme.type
+        hilight .hilight.go 1 "osdCONTEXT"     .scheme.type
+        hilight .hilight.go 1 "osdDISPLAY"     .scheme.type
+    !endif
+
+    ; Doxygen highlighting extensions. Highlights keywords in Doxygen
+    !if &sin "l" .fhook-go.setup
+        ; Create a new doxygen hilighting scheme
+        !if &not &exi .hilight.godoxygen
+            set-variable .hilight.godoxygen &pinc .hilight.next 1
+            set-variable .hilight.godoxygencpp &pinc .hilight.next 1
+            set-variable .hilight.pdoxygen &pinc .hilight.next 1
+            set-variable .hilight.pdoxygencpp &pinc .hilight.next 1
+        !endif
+        ;
+        ; Cater for the /** .. */ type of comment.
+        ;
+        ; Add a hook into the normal 'C' hilighing. We jump into
+        ; cdoxygen when we see an opening "/**" or "/*!".
+        hilight .hilight.go 0x80 "/\\*\\*" .hilight.godoxygen  .scheme.comment
+        hilight .hilight.go 0x80 "/\\*!"   .hilight.godoxygen  .scheme.comment
+        ; Doxygen hilighting space.
+        0 hilight .hilight.godoxygen  2 50                    .scheme.comment
+        ; "\}" or "@}"
+        hilight .hilight.godoxygen    1 "[\\\\@]}"            .scheme.keyword
+        ; "\{" or "@{"
+        hilight .hilight.godoxygen    1 "[\\\\@]{"            .scheme.keyword
+        ; "\a anyWord" or "@a anyWord"
+        hilight .hilight.godoxygen    1 "[\\\\@]a[ \t]+\\w+"  .scheme.keyword
+        ; "\anyWord" or "@anyWord" - Use branch token and close when not a word!
+        hilight .hilight.godoxygen    4 "[\\\\@]" "\\}\\W" "" .scheme.keyword
+        ; We must return to C when we see the close of comment "*/"
+        hilight .hilight.godoxygen 0x80 "\\*/" .hilight.go     .scheme.comment
+        ;
+        ; Cater for the /// type of comment
+        ;
+        ; Add a hook into the normal C++ hilighing. We jump into cppdoxygen when
+        ; we see an opening "///" or "//!".
+        hilight .hilight.go 0x80 "///" .hilight.godoxygencpp  .scheme.comment
+        hilight .hilight.go 0x80 "//!" .hilight.godoxygencpp  .scheme.comment
+        ; Doxygen hilighting space.
+        0 hilight .hilight.godoxygencpp   2 50                  .scheme.comment
+        ; "\}" or "@}"
+        hilight .hilight.godoxygencpp    1 "[\\\\@]}"           .scheme.keyword
+        ; "\{" or "@{"
+        hilight .hilight.godoxygencpp    1 "[\\\\@]{"           .scheme.keyword
+        ; "\a anyWord" or "@a anyWord"
+        hilight .hilight.godoxygencpp    1 "[\\\\@]a[ \t]+\\w+" .scheme.keyword
+        ; "\anyWord" or "@anyWord" - Use branch token and close when not a word!
+        hilight .hilight.godoxygencpp    4 "[\\\\@]" "\\}\\W" "" .scheme.keyword
+        ; We must return to C when we see the close of comment "*/"
+        hilight .hilight.godoxygencpp 0x80 "\n" .hilight.go      .scheme.comment
+        ;
+        ; Special hilighting for a 'C' parameter - branch from the doxygen
+        ; space into scheme for the parameter. Note that @param is defined
+        ; after the generic '@' definitions.
+        ; 
+        ; Special for @param, @see, @retval   
+        hilight .hilight.godoxygen 0x80 "[\\\\@]file"   .hilight.pdoxygen .scheme.keyword
+        hilight .hilight.godoxygen 0x80 "[\\\\@]struct" .hilight.pdoxygen .scheme.keyword
+        hilight .hilight.godoxygen 0x80 "[\\\\@]param"  .hilight.pdoxygen .scheme.keyword
+        hilight .hilight.godoxygen 0x80 "[\\\\@]see"    .hilight.pdoxygen .scheme.keyword
+        hilight .hilight.godoxygen 0x80 "[\\\\@]enum"   .hilight.pdoxygen .scheme.keyword
+        hilight .hilight.godoxygen 0x80 "[\\\\@]retval" .hilight.pdoxygen .scheme.keyword
+        hilight .hilight.godoxygen 0x80 "[\\\\@]a"      .hilight.pdoxygen .scheme.keyword
+        ; Doxygen parameter hilighting space.
+        0 hilight .hilight.pdoxygen 2 50 .scheme.error
+        ; Hilight the next word and finish.
+        hilight .hilight.pdoxygen 0x80 "\\s+[-+a-zA-Z0-9.()!_\\.]+" .hilight.godoxygen .scheme.prepro
+        ; Hilight the optional parameter definitions.
+        hilight .hilight.pdoxygen 0 "\\s*\\[\\s*in\\s*\\]" .scheme.variable
+        hilight .hilight.pdoxygen 0 "\\s*\\[\\s*out\\s*\\]" .scheme.variable
+        hilight .hilight.pdoxygen 0 "\\s*\\[\\s*in\\s*,\\s*out\\s*\\]" .scheme.variable
+        hilight .hilight.pdoxygen 0 "\\s*\\[\\s*out\\s*,\\s*in\\s*\\]" .scheme.variable
+        ; We must return to C when we see the close of comment "*/"
+        hilight .hilight.pdoxygen 0x80 "\\*/" .hilight.go .scheme.error
+        ;
+        ; Extensions to Doxygen hilighting.
+        ;
+        ; Special hilighting for a 'C++' parameter - branch from the doxygen
+        ; space into scheme for the parameter. Note that @param is defined
+        ; after
+        ; the generic '@' definitions.
+        ; 
+        ; Special for @param, @see, @retval   
+        hilight .hilight.godoxygencpp 0x80 "[\\\\@]a"      .hilight.pdoxygencpp .scheme.keyword
+        hilight .hilight.godoxygencpp 0x80 "[\\\\@]file"   .hilight.pdoxygencpp .scheme.keyword
+        hilight .hilight.godoxygencpp 0x80 "[\\\\@]struct" .hilight.pdoxygencpp .scheme.keyword
+        hilight .hilight.godoxygencpp 0x80 "[\\\\@]param"  .hilight.pdoxygencpp .scheme.keyword
+        hilight .hilight.godoxygencpp 0x80 "[\\\\@]see"    .hilight.pdoxygencpp .scheme.keyword
+        hilight .hilight.godoxygencpp 0x80 "[\\\\@]enum"   .hilight.pdoxygencpp .scheme.keyword
+        hilight .hilight.godoxygencpp 0x80 "[\\\\@]retval" .hilight.pdoxygencpp .scheme.keyword
+        ; Doxygen parameter hilighting space.
+        0 hilight .hilight.pdoxygencpp 2 50 .scheme.error
+        ; Hilight the next word and finish.
+        hilight .hilight.pdoxygencpp 0x80 "\\S+[a-zA-Z0-9.()!_\\.]+" .hilight.godoxygencpp .scheme.prepro
+        ; Hilight the optional parameter definitions.
+        hilight .hilight.pdoxygencpp 0 "\\s*\\[\\s*in\\s*\\]" .scheme.variable
+        hilight .hilight.pdoxygencpp 0 "\\s*\\[\\s*out\\s*\\]" .scheme.variable
+        hilight .hilight.pdoxygencpp 0 "\\s*\\[\\s*in\\s*,\\s*out\\s*\\]" .scheme.variable
+        hilight .hilight.pdoxygencpp 0 "\\s*\\[\\s*out\\s*,\\s*in\\s*\\]" .scheme.variable
+        ; We must return to C when we see the close of comment "*/"
+        hilight .hilight.pdoxygencpp 0x80 "$" .hilight.go .scheme.error
+    !endif
+    
+    ; hilight.gourly braces used when it is difficult to differentiate between a
+    ; round bracket and curly brace.
+    !if &sin "r" .fhook-go.setup
+        ; In keyword colour
+        hilight .hilight.go 1 "{"                   .scheme.keyword
+        hilight .hilight.go 1 "}"                   .scheme.keyword
+    !endif
+
+    ; Pick up bogus 'C' constructs extension
+    !if &sin "v" .fhook-go.setup
+        ; Detect a for loop with no body - put semi-colon on next line, i.e.
+        ; for (i = 1; i < 10; i++);
+        ; { ... }
+        hilight .hilight.go 2 "\\s\\{for[ \t]*([^()]*)[ \t]*;" .scheme.hlred
+        ; Detect a for loop with no body - put semi-colon on next line, i.e.
+        ; while (i == 1);
+        ; { ... }
+        ; hilight .hilight.go  2 "\\s\\{while[ \t]*([^()]*)[ \t]*;" .scheme.hlred
+        ; Detect a bad 'if' statement that is terminated with ';' e.g.
+        ; if (i < x);
+        ; { ... }
+        hilight .hilight.go 2 "\\s\\{if[ \t]*([^()]*)[ \t]*;"  .scheme.hlred
+        ; Pick up a bad assignment in a conditional statement. e.g.
+        ; if (a = SOME_CONST)
+        ; while (a = SOME_CONST)
+        hilight .hilight.go 2 "\\s\\{if[ \t]*([ \t]*\\w+[ \t]*=[ \t]*\\w+[ \t]*)" .scheme.hlred
+        hilight .hilight.go 2 "\\s\\{while[ \t]*([ \t]*\\w+[ \t]*=[ \t]*\\w+[ \t]*)" .scheme.hlred
+        ; Detect a spurious '\' at the end of the line that is
+        ; not a string or #define. i.e.
+        ; char *d = "This is a " \
+        ;           "Duff string continuation";
+        hilight .hilight.go 2 "\\\\$"               .scheme.hlred
+    !endif
+
+!endif
+!if &sin "d" .fhook-go.setup
+    ; Allman style
+    0 indent .hilight.go 12
+    indent .hilight.go "u" " * "
+    !if &sin "y" .fhook-go.setup
+        ; Redefine for GNU Style C use t=2
+        indent .hilight.go "s" t
+        indent .hilight.go "b" t
+        indent .hilight.go "e" t
+        indent .hilight.go "a" -t
+        indent .hilight.go "w" 0
+    !endif        
+!endif
+;
+; setup useful C fuctions to auto-load cmacros
+define-macro-file cmacros c-slashify c-deslashify c-hash-eval c-hash-set-define c-hash-unset-define c-hash-del
+define-macro-file hkcpp fhook-go.p
+;
+;
+; c to cpp file converter
+define-macro c-to-cpp-convert
+    beginning-of-buffer
+    1 buffer-mode "magic"
+    !force -1 search-forward "-[*!]- [Cc] -[*!]-"
+    !if $status
+        4 backward-char
+        insert-string "++"
+    !else
+        !force -1 search-forward "-[*!]- [Cc]++ -[*!]-"
+        !if &not $status
+            !force -1 search-forward "/\\*"
+            !if $status
+                insert-string " -*- C++ -*- "
+            !else
+                insert-string "/* -*- C++ -*- */\n"
+            !endif
+        !endif
+    !endif
+    set-variable $buffer-fhook "fhook-go.p"
+    fhook-go.p
+!emacro
+
+buffer-init-fhook "go"
