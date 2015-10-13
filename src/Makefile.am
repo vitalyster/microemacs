@@ -36,5 +36,4 @@ me_LDADD = -lgdi32 -lcomdlg32 -lwinspool
 endif
 
 .rc.o:
-	@if $(AM_V_P); then set -x; else echo "  RC       $<"; fi
-	$(AM_V_at)@RC@ -o $@ $<
+	$(AM_V_GEN)@RC@ -o $@ $<
