@@ -6225,7 +6225,7 @@ meFrameKillFocus(meFrame *frame)
 ****************************************************************************/
 
 LONG APIENTRY
-MainWndProc (HWND hWnd, UINT message, UINT wParam, LONG lParam)
+MainWndProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     static LONG setCursorLastLParam ;
     meFrame *frame ;

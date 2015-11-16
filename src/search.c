@@ -364,7 +364,7 @@ scanner(meUByte *patrn, int direct, int beg_or_end, int *count,
     register meUByte *patptr;           /* pointer into pattern */
     register meUByte *curptr;           /* pointer into pattern */
     register meLine *curline;           /* current line during scan */
-    register int curoff;                /* position within current line */
+    register int curoff = 0;            /* position within current line */
     register meUByte *matchptr;         /* pointer into pattern */
     register meLine *matchline;         /* current line during matching */
     register int matchoff;              /* position in matching line */

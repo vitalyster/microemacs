@@ -43,8 +43,6 @@
 #ifndef __EMAIN_H__
 #define __EMAIN_H__
 
-#include "config.h"
-
 /* the following 3 defines are used for debugging and memory leak checking,
  * _ME_WIN32_FULL_DEBUG - Enables Windows debugging
  * _ME_FREE_ALL_MEMORY  - Frees all memory before exiting
