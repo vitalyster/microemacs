@@ -24,7 +24,7 @@ set-variable .fhook-go.setup &reg "/history/fhook/go" "bdfghnopxlqv"
 set-variable .fhook-go.setup-mask "abdefghikmnoptuxclqrvy"
 set-variable .fhook-go.comment    "|/*| */|*| * | * |f|"
 set-variable .fhook-go.comment-1  "|//||//|// | //|r|"
-set-variable .fhook-go.indent-width 4
+set-variable .fhook-go.indent-width 8
 
 ; Setup collapse
 set-variable .fhook-go.collapse-open "^\\(func\\|type\\)"
@@ -35,11 +35,11 @@ set-variable .fhook-go.item-list-s1 "^\\s*\\(func\\|type\\)\\s+\\(.+\\)\\s+{"
 set-variable .fhook-go.item-list-r1 "\\1 \ecB\\2\ecA"
 
 ; Setup Commands
-set-variable .fhook-go.command-flag "|t|th|th|"
-set-variable .fhook-go.command-name "||gofmt|gomake|"
-set-variable .fhook-go.command-nbind "||||"
-set-variable .fhook-go.command-kbind "||||"
-set-variable .fhook-go.command-desc  "||Go \HFormat|Go \HMake|"
+set-variable .fhook-go.command-flag "|t|th|th|th|th|"
+set-variable .fhook-go.command-name "||gofmt|goimports|gobuild|gorun|"
+set-variable .fhook-go.command-nbind "||||||"
+set-variable .fhook-go.command-kbind "||||||"
+set-variable .fhook-go.command-desc  "||Go \HFormat|Go \HImports|Go \HBuild|Go \HRun|"
 
 !if &not &exist .hilight.go
     set-variable .hilight.go &pinc .hilight.next 1
@@ -156,12 +156,52 @@ set-variable .fhook-go.command-desc  "||Go \HFormat|Go \HMake|"
     indent .hilight.go c "/$" t
 !endif
 
+;define-macro gofmt
+;    filter-buffer "gofmt -w"
+;    ; DANGER would like to save-buffer auto here, but if gofmt hits an error
+;    ; the output of filter-buffer is empty, nuking your file! Need some logic
+;    ; here to detect empty filter-buffer?
+;    ;save-buffer
+;!emacro
+
 define-macro gofmt
-    filter-buffer "gofmt"
+    set-variable .file $buffer-bname
+    ;filter-buffer "gofmt"
+    5 shell-command &cat "gofmt -w " .file
+    
+    !if &equ $result 0
+        0 reread-file
+        ;save-buffer
+    !endif
 !emacro
 
-define-macro gomake
-    compile "gomake"
+define-macro goimports
+    set-variable .file $buffer-bname
+    ;filter-buffer "goimports"
+    5 shell-command &cat "goimports -w " .file
+    
+    !if &equ $result 0
+        0 reread-file
+        ;save-buffer
+    !endif
+!emacro
+
+define-macro gobuild
+    set-variable .file $buffer-bname
+    compile &cat "go build " .file
+;    delete-other-windows
+!emacro
+
+define-macro gorun
+    set-variable .file $buffer-bname
+    compile &cat "go run " .file
 !emacro
 
 buffer-init-fhook "go"
+
+; Useful shortcuts
+global-bind-key "gofmt" "esc A-f"
+global-bind-key "goimports" "esc A-i"
+global-bind-key "gobuild" "esc A-b"
+global-bind-key "gorun" "esc A-r"
+global-bind-key "delete-other-windows" "esc f1"
