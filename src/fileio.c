@@ -1432,7 +1432,6 @@ createBackupName(meUByte *filename, meUByte *fn, meUByte backl, int flag)
 	if(((s=meGetenv("MEBACKUPPATH")) != NULL) && (meStrlen(s) > 0) &&
 	   ((backupPath=meStrdup(s)) != NULL))
         {
-            fileNameConvertDirChar(backupPath) ;
             if((backupPath[0] == DIR_CHAR)
 #ifdef _DRV_CHAR
                || (isAlpha(backupPath[0]) && (backupPath[1] == _DRV_CHAR))
@@ -1976,7 +1975,7 @@ ffReadFileOpen(meUByte *fname, meUInt flags, meBuffer *bp)
         else
         {
 #ifdef _WIN32
-            if((meio.rp=CreateFile(fname,GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_EXISTING,
+            if((meio.rp=CreateFile(utf8_decode(fname),GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_EXISTING,
                                FILE_ATTRIBUTE_NORMAL,NULL)) == INVALID_HANDLE_VALUE)
 #else
             if ((meio.rp=fopen((char *)fname, "rb")) == NULL)
@@ -2408,7 +2407,7 @@ ffWriteFileOpen(meUByte *fname, meUInt flags, meBuffer *bp)
                 if(!meTestDir(fname))
                 {
 #ifdef _WIN32
-                    ii = (RemoveDirectory(fname) == 0) ;
+                    ii = (RemoveDirectory(utf8_decode(fname)) == 0) ;
 #else
                     ii = rmdir((char *) fname) ;
                     if(ii && (errno == ENOTDIR))
@@ -2430,7 +2429,7 @@ ffWriteFileOpen(meUByte *fname, meUInt flags, meBuffer *bp)
             if(flags & meRWFLAG_MKDIR)
             {
 #ifdef _WIN32
-                if(CreateDirectory(fname,NULL) == 0)
+                if(CreateDirectory(utf8_decode(fname),NULL) == 0)
 #else
 #ifdef _DOS
                 if(mkdir((char *)fname,0) != 0)
@@ -2462,7 +2461,7 @@ ffWriteFileOpen(meUByte *fname, meUInt flags, meBuffer *bp)
             /* Windows must open the file with the correct permissions to support the
              * compress attribute
              */
-            if((meio.wp=CreateFile(fname,GENERIC_WRITE,FILE_SHARE_READ,NULL,create,
+            if((meio.wp=CreateFile(utf8_decode(fname),GENERIC_WRITE,FILE_SHARE_READ,NULL,create,
                                    ((bp == NULL) ? meUmask:bp->stats.stmode),
                                    NULL)) == INVALID_HANDLE_VALUE)
             {

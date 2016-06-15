@@ -106,11 +106,7 @@ __mkTempName (meUByte *buf, meUByte *name)
 void
 __mkTempName (meUByte *buf, meUByte *name, meUByte *ext)
 {
-#ifdef _CONVDIR_CHAR
-#define PIPEDIR_CHAR _CONVDIR_CHAR
-#else
 #define PIPEDIR_CHAR DIR_CHAR
-#endif
     static meUByte *tmpDir=NULL ;
     meUByte *pp ;
     int ii ;

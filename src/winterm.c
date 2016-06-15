@@ -95,7 +95,7 @@
 
 /* Ini-file reference */
 #ifndef _NANOEMACS
-#define ME_INI_FILE    "ME32.INI"       /* Name of the ini file */
+#define ME_INI_FILE    L"ME32.INI"       /* Name of the ini file */
 #endif
 
 /* Define the default search sections in the .ini file */
@@ -195,6 +195,29 @@ int ttServerToRead = 0;
 meUByte ttServerCheck = 0;
 #endif
 
+LPWSTR utf8_decode(const meUByte *str) {
+	LPWSTR result;
+	int req_size = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+	if (req_size > 0) {
+		result = calloc(sizeof(WCHAR), req_size);
+		if (MultiByteToWideChar(CP_UTF8, 0, str, -1, result, req_size)) {
+			return result;
+		}
+	}
+	return NULL;
+}
+meUByte *utf8_encode(LPWSTR wstr) {
+	meByte *result;
+	int req_size = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+	if (req_size > 0) {
+		result = calloc(sizeof(meUByte), req_size);
+		if (WideCharToMultiByte(CP_UTF8, 0, wstr, -1, result, req_size, NULL, NULL)) {
+			return result;
+		}
+	}
+	return NULL;
+}
+
 LONG APIENTRY
 MainWndProc (HWND hWnd, UINT message, UINT wParam, LONG lParam) ;
 
@@ -204,7 +227,7 @@ MainWndProc (HWND hWnd, UINT message, UINT wParam, LONG lParam) ;
  * this handle.
  */
 static HANDLE hInput, hOutput;			/* Handles to console I/O */
-static char chConsoleTitle[256];		/* Preserve the title of the console. */
+static WCHAR chConsoleTitle[256];		/* Preserve the title of the console. */
 static DWORD ConsoleMode, OldConsoleMode;	/* Current and old console modes */
 static SMALL_RECT consolePaintArea={0};		/* Update area for console */
 static int ciScreenSize = 0 ;			/* Size of screen buffer memory */
@@ -435,7 +458,7 @@ TTopenClientServer(void)
 
         /* Open the response file for read/write, if this fails we are not the server, another
          * ME is */
-        if ((clientHandle = CreateFile (fname,
+        if ((clientHandle = CreateFile (utf8_decode(fname),
                                         GENERIC_WRITE,
                                         FILE_SHARE_READ,
                                         NULL,
@@ -448,7 +471,7 @@ TTopenClientServer(void)
         }
         /* Open command file for read/write */
         mkTempName (fname, meUserName, ".cmd");
-        if ((serverHandle = CreateFile (fname,
+        if ((serverHandle = CreateFile (utf8_decode(fname),
                                         GENERIC_READ,
                                         FILE_SHARE_READ|FILE_SHARE_WRITE,
                                         NULL,
@@ -570,9 +593,9 @@ TTkillClientServer (void)
 
         /* remove the command and response files */
         mkTempName (fname, meUserName, ".cmd");
-        DeleteFile (fname);
+        meUnlink (fname);
         mkTempName (fname, meUserName, ".rsp");
-        DeleteFile (fname);
+        meUnlink (fname);
     }
     if (connectHandle != INVALID_HANDLE_VALUE)
     {
@@ -594,9 +617,9 @@ TTconnectClientServer (void)
         /* Create the file name, if the file exists, or deleting it
          * succeeds then there is no server, fail */
         mkTempName (fname, meUserName, ".cmd");
-        if(meTestExist(fname) || DeleteFile (fname))
+        if(meTestExist(fname) || meUnlink (fname))
             return 0 ;
-        if ((connectHandle = CreateFile (fname, GENERIC_WRITE, FILE_SHARE_READ, NULL,
+        if ((connectHandle = CreateFile (utf8_decode(fname), GENERIC_WRITE, FILE_SHARE_READ, NULL,
                                          OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,NULL)) == INVALID_HANDLE_VALUE)
             return 0 ;
         /* Goto the end of the file */
@@ -604,7 +627,7 @@ TTconnectClientServer (void)
 
         /* Try opening the response file and get the base window handle value */
         mkTempName (fname, meUserName, ".rsp");
-        if ((hndl = CreateFile (fname, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
+        if ((hndl = CreateFile (utf8_decode(fname), GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
                                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL)) != INVALID_HANDLE_VALUE)
         {
             if((ReadFile(hndl,&fname,20,&ii,NULL) != 0) && (ii > 0))
@@ -1389,7 +1412,7 @@ meFrameDrawCursor(meFrame *frame, HDC hdc)
                 clientRow,
                 ETO_OPAQUE|ETO_CLIPPED,   /* Fill background */
                 &rline,                   /* Background area */
-                &cc,                      /* Text string */
+                utf8_decode(&cc),         /* Text string */
                 1,                        /* Length of string */
                 eCellMetrics.cellSpacing);
 
@@ -1410,7 +1433,7 @@ meFrameDrawCursor(meFrame *frame, HDC hdc)
                     clientRow,
                     ETO_CLIPPED,    /* Clip char to smaller rectangle */
                     &rline,         /* Background area */
-                    &cc,            /* Text string */
+                    utf8_decode(&cc),/* Text string */
                     1,              /* Length of string */
                     eCellMetrics.cellSpacing);
     }
@@ -1661,7 +1684,7 @@ meFrameDraw(meFrame *frame)
 			clientRow,
 			ETO_OPAQUE,     /* Fill background */
 			&rline,         /* Background area */
-			tbp+col,        /* Text string */
+			utf8_decode(tbp+col),        /* Text string */
 			length,         /* Length of string */
 			eCellMetrics.cellSpacing);
             col--;                      /* Restore position */
@@ -1968,7 +1991,7 @@ mkTempCommName(meUByte *filename, meUByte *basename)
     {
         if(meTestExist(filename))
             break ;
-        else if ((hdl = CreateFile(filename,GENERIC_READ,FILE_SHARE_READ,NULL,
+        else if ((hdl = CreateFile(utf8_decode(filename),GENERIC_READ,FILE_SHARE_READ,NULL,
                                    OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL)) != INVALID_HANDLE_VALUE)
         {
             CloseHandle(hdl);
@@ -2167,7 +2190,7 @@ WinLaunchProgram (meUByte *cmd, int flags, meUByte *inFile, meUByte *outFile,
         }
 
         /* Only a shell needs to be visible, so hide the rest */
-        meSuInfo.lpTitle = cmd;
+        meSuInfo.lpTitle = utf8_decode(cmd);
         meSuInfo.hStdInput  = INVALID_HANDLE_VALUE ;
         meSuInfo.hStdOutput = INVALID_HANDLE_VALUE ;
         meSuInfo.hStdError  = INVALID_HANDLE_VALUE ;
@@ -2184,13 +2207,13 @@ WinLaunchProgram (meUByte *cmd, int flags, meUByte *inFile, meUByte *outFile,
             if(flags & LAUNCH_FILTER)
             {
                 HANDLE h ;
-                if((meSuInfo.hStdInput=CreateFile(inFile,GENERIC_READ,FILE_SHARE_READ,&sbuts,
+                if((meSuInfo.hStdInput=CreateFile(utf8_decode(inFile),GENERIC_READ,FILE_SHARE_READ,&sbuts,
                                                   OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL)) == INVALID_HANDLE_VALUE)
                 {
                     meFree(cmdLine) ;
                     return meFALSE ;
                 }
-                if((meSuInfo.hStdOutput=CreateFile(outFile,GENERIC_WRITE,FILE_SHARE_READ,&sbuts,
+                if((meSuInfo.hStdOutput=CreateFile(utf8_decode(outFile),GENERIC_WRITE,FILE_SHARE_READ,&sbuts,
                                                    OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL)) == INVALID_HANDLE_VALUE)
                 {
                     CloseHandle(meSuInfo.hStdInput) ;
@@ -2256,7 +2279,7 @@ WinLaunchProgram (meUByte *cmd, int flags, meUByte *inFile, meUByte *outFile,
             else
             {
                 /* the output file name will be set as either one was given or we have created one */
-                meSuInfo.hStdOutput=CreateFile(outFile,GENERIC_WRITE,FILE_SHARE_WRITE,
+                meSuInfo.hStdOutput=CreateFile(utf8_decode(outFile),GENERIC_WRITE,FILE_SHARE_WRITE,
                                                &sbuts,CREATE_ALWAYS,FILE_ATTRIBUTE_TEMPORARY,NULL) ;
                 if(meSuInfo.hStdOutput == INVALID_HANDLE_VALUE)
                 {
@@ -2288,15 +2311,15 @@ WinLaunchProgram (meUByte *cmd, int flags, meUByte *inFile, meUByte *outFile,
                  * Construct the dummy input file */
                 mkTempName (dummyInFile, DUMMY_STDIN_FILE,NULL);
 
-                if ((dumHdl = CreateFile(dummyInFile,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,
+                if ((dumHdl = CreateFile(utf8_decode(dummyInFile),GENERIC_WRITE,FILE_SHARE_WRITE,NULL,
                                          CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL)) != INVALID_HANDLE_VALUE)
                     CloseHandle (dumHdl);
 
                 /* Re-open the file for reading */
-                if ((dumHdl = CreateFile(dummyInFile,GENERIC_READ,FILE_SHARE_READ,&sbuts,
+                if ((dumHdl = CreateFile(utf8_decode(dummyInFile),GENERIC_READ,FILE_SHARE_READ,&sbuts,
                                          OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL)) == INVALID_HANDLE_VALUE)
                 {
-                    DeleteFile(dummyInFile) ;
+                    meUnlink(dummyInFile) ;
                     CloseHandle(meSuInfo.hStdOutput) ;
                     meFree(cmdLine) ;
                     return meFALSE;
@@ -2312,7 +2335,7 @@ WinLaunchProgram (meUByte *cmd, int flags, meUByte *inFile, meUByte *outFile,
     }
     /* start the process and get a handle on it */
     if(CreateProcess (NULL,
-                      cp,
+                      utf8_decode(cp),
                       NULL,
                       NULL,
                       ((flags & (LAUNCH_SHELL|LAUNCH_NOWAIT)) ? meFALSE:meTRUE),
@@ -2422,7 +2445,7 @@ WinLaunchProgram (meUByte *cmd, int flags, meUByte *inFile, meUByte *outFile,
         if(flags & LAUNCH_PIPE)
     {
         /* Delete the dummy stdin file if there is one. */
-        DeleteFile(dummyInFile) ;
+        meUnlink(dummyInFile) ;
     }
     meNullFree(cmdLine) ;
     return status ;
@@ -3682,7 +3705,7 @@ TTchangeFont (meUByte *fontName, int fontType, int fontWeight,
                 return meFALSE ;
             /* Save the values in $result */
             sprintf(resultStr,"%1d%4d%4d%4d%s",(int) (logfont.lfWeight/100),(int) logfont.lfWidth,
-                    (int) logfont.lfHeight,logfont.lfCharSet,logfont.lfFaceName) ;
+                    (int) logfont.lfHeight,logfont.lfCharSet,utf8_encode(logfont.lfFaceName)) ;
             if (fontType < -2)
                 /* if a -ve argument was past to changeFont then don't set the font */
                 return meTRUE ;
@@ -3714,7 +3737,7 @@ TTchangeFont (meUByte *fontName, int fontType, int fontWeight,
             logfont.lfCharSet = fontType;
             logfont.lfHeight = fontHeight;    /* Height */
             logfont.lfWidth = fontWidth;      /* Width */
-            strncpy (logfont.lfFaceName, fontName,  sizeof (logfont.lfFaceName));
+            wcsncpy (logfont.lfFaceName, utf8_decode(fontName), wcslen(utf8_decode(fontName)));
         }
         else
         {
@@ -4514,8 +4537,8 @@ meFrameTermInit(meFrame *frame, meFrame *sibling)
                 return meFALSE ;
             memset(frameData,0,sizeof(meFrameData)) ;
             frame->termData = frameData ;
-            frameData->hwnd = CreateWindow ("MicroEmacsClass",
-                                            ME_FULLNAME " " meVERSION,
+            frameData->hwnd = CreateWindow (utf8_decode("MicroEmacsClass"),
+				utf8_decode(ME_FULLNAME " " meVERSION),
                                             WS_OVERLAPPEDWINDOW,  /* No scroll bars */
                                             TTdefaultPosX,
                                             TTdefaultPosY,
@@ -4666,8 +4689,8 @@ TTstart (void)
         FreeConsole ();
 #endif /* _ME_CONSOLE */
 
-        baseHwnd = CreateWindow ("MicroEmacsClass",
-                                 ME_FULLNAME " " meVERSION,
+        baseHwnd = CreateWindow (utf8_decode("MicroEmacsClass"),
+			utf8_decode(ME_FULLNAME " " meVERSION),
                                  WS_DISABLED,
                                  CW_USEDEFAULT,CW_USEDEFAULT,
                                  CW_USEDEFAULT,CW_USEDEFAULT,
@@ -5307,15 +5330,16 @@ meFrameRepositionWindow(meFrame *frame, int resize)
 static void
 meSetupUserName(void)
 {
-    char *nn, buff[128] ;
+    meUByte *nn;
+    WCHAR buff[128];
     DWORD ii ;
 
     /* Decide on a name. */
     if(((nn = meGetenv ("MENAME")) == NULL) || (nn[0] == '\0'))
     {
         ii = 128 ;
-        if((GetUserName(buff,&ii) == meTRUE) && (buff[0] != '\0'))
-            nn = buff ;
+        if((GetUserName(buff, &ii) == meTRUE) && (buff[0] != '\0'))
+            nn = utf8_encode(buff);
         else if(((nn = meGetenv("LOGNAME")) != NULL) && (nn[0] == '\0'))
             nn = NULL ;
     }
@@ -5331,7 +5355,7 @@ meSetupUserName(void)
 void
 meSetupPathsAndUser(char *progname)
 {
-    char *ss, *appData, buff[meBUF_SIZE_MAX], appDataBuff[meBUF_SIZE_MAX] ;
+    WCHAR *ss, *appData, buff[meBUF_SIZE_MAX], appDataBuff[meBUF_SIZE_MAX];
     int ii, ll, gotUserPath ;
 #if (defined CSIDL_APPDATA)
     LPITEMIDLIST idList ;
@@ -5346,7 +5370,7 @@ meSetupPathsAndUser(char *progname)
      * Windows specific system call to determine the full executable filename
      * and then perform an executableLookup() in order to correct the
      * filename. - Thanks to Petro 2009-11-09. */
-    if(((GetModuleFileName(0, buff, sizeof (buff)) > 0) && executableLookup(buff,evalResult)) ||
+    if(((GetModuleFileName(0, buff, sizeof (buff)) > 0) && executableLookup(utf8_encode(buff),evalResult)) ||
        executableLookup(progname,evalResult))
     {
         meProgName = meStrdup(evalResult) ;
@@ -5388,21 +5412,21 @@ meSetupPathsAndUser(char *progname)
     else
 #endif
         /* get the windows user application data path */
-        if(((ss = meGetenv ("APPDATA")) != NULL) && (ss[0] != '\0'))
+        if(((ss = _wgetenv(L"APPDATA")) != NULL) && (ss[0] != '\0'))
     {
-        strcpy(appDataBuff,ss) ;
+        wcscpy(appDataBuff, ss) ;
         appData = appDataBuff ;
     }
     else
         appData = NULL ;
 
     if((meUserPath == NULL) &&
-       ((ss = meGetenv ("MEUSERPATH")) != NULL) && (ss[0] != '\0'))
-        meUserPath = meStrdup(ss) ;
+       ((ss = _wgetenv(L"MEUSERPATH")) != NULL) && (ss[0] != '\0'))
+        meUserPath = utf8_encode(_wcsdup(ss));
 
     if((searchPath == NULL) &&
-       ((ss = meGetenv ("MEPATH")) != NULL) && (ss[0] != '\0'))
-        searchPath = meStrdup(ss) ;
+       ((ss = _wgetenv(L"MEPATH")) != NULL) && (ss[0] != '\0'))
+        searchPath = utf8_encode(_wcsdup(ss));
 
     if(searchPath != NULL)
     {
@@ -5417,11 +5441,11 @@ meSetupPathsAndUser(char *progname)
             {
                 /* meMalloc will exit if it fails as ME has not finished initialising */
                 ss = meMalloc(ll + strlen(searchPath) + 2) ;
-                strcpy(ss,meUserPath) ;
+                wcscpy(ss, utf8_decode(meUserPath));
                 ss[ll] = mePATH_CHAR ;
-                strcpy(ss+ll+1,searchPath) ;
+                wcscpy(ss+ll+2, utf8_decode(searchPath));
                 meFree(searchPath) ;
-                searchPath = ss ;
+                searchPath = utf8_encode(ss);
             }
         }
     }
@@ -5438,9 +5462,10 @@ meSetupPathsAndUser(char *progname)
         /* look for the $APPDATA/jasspa directory */
         if(appData != NULL)
         {
-            strcpy(buff,appData) ;
-            strcat(buff,"/jasspa") ;
-            if(((ll = mePathAddSearchPath(ll,evalResult,buff,&gotUserPath)) > 0) &&
+            wcscpy(buff, appData);
+            wcscat(buff, L"\\");
+            wcscat(buff, L"jasspa");
+            if(((ll = mePathAddSearchPath(ll,evalResult,utf8_encode(buff),&gotUserPath)) > 0) &&
                !gotUserPath)
                 /* as this is the user's area, use this directory unless we find
                  * a .../<$user-name>/ directory */
@@ -5450,20 +5475,20 @@ meSetupPathsAndUser(char *progname)
         /* Get the system path of the installed macros. Use $MEINSTPATH as the
          * MicroEmacs standard macros */
         if(meInstallPath != NULL)
-            ll = mePathAddSearchPath(ll,evalResult,meInstallPath,&gotUserPath) ;
-        else if(((ss = meGetenv ("MEINSTALLPATH")) != NULL) && (ss[0] != '\0'))
+            ll = mePathAddSearchPath(ll,evalResult, meInstallPath,&gotUserPath) ;
+        else if(((ss = _wgetenv(L"MEINSTALLPATH")) != NULL) && (ss[0] != '\0'))
         {
-            strcpy(buff,ss) ;
-            ll = mePathAddSearchPath(ll,evalResult,buff,&gotUserPath) ;
+            wcscpy(buff, ss);
+            ll = mePathAddSearchPath(ll,evalResult, utf8_encode(buff),&gotUserPath) ;
         }
 
         /* also check for directories in the same location as the binary */
         if((meProgName != NULL) && ((ss=meStrrchr(meProgName,DIR_CHAR)) != NULL))
         {
             ii = (((size_t) ss) - ((size_t) meProgName)) ;
-            strncpy(buff,meProgName,ii) ;
+            wcsncpy(buff,utf8_decode(meProgName),ii) ;
             buff[ii] = '\0' ;
-            ll = mePathAddSearchPath(ll,evalResult,buff,&gotUserPath) ;
+            ll = mePathAddSearchPath(ll,evalResult,utf8_encode(buff),&gotUserPath) ;
         }
 #if MEOPT_BINFS
         /* also check for the built-in file system */
@@ -5473,35 +5498,31 @@ meSetupPathsAndUser(char *progname)
         {
             /* We have not found a user path so add the $APPDATA as the user-path
              * as this is the best place for macros to write to etc. */
-            strcpy(buff,appData) ;
+            wcscpy(buff, appData);
             if(ll)
             {
-                ii = strlen(buff) ;
+                ii = wcslen(buff) ;
                 buff[ii++] = mePATH_CHAR ;
-                meStrcpy(buff+ii,evalResult) ;
+                wcscpy(buff+ii, utf8_decode(evalResult));
             }
-            searchPath = meStrdup(buff) ;
+            searchPath = meStrdup(utf8_encode(buff));
         }
         else if(ll > 0)
             searchPath = meStrdup(evalResult) ;
     }
     if(searchPath != NULL)
     {
-        fileNameConvertDirChar(searchPath) ;
         if(meUserPath == NULL)
         {
             /* no user path yet, take the first path from the search-path, this
              * should be a sensible directory to use */
-            if((ss = meStrchr(searchPath,mePATH_CHAR)) != NULL)
+            meUserPath = meStrdup(searchPath);
+            if((ss = meStrchr(meUserPath,mePATH_CHAR)) != NULL)
                 *ss = '\0' ;
-            meUserPath = meStrdup(searchPath) ;
-            if(ss != NULL)
-                *ss = mePATH_CHAR ;
         }
     }
     if(meUserPath != NULL)
     {
-        fileNameConvertDirChar(meUserPath) ;
         ll = meStrlen(meUserPath) ;
         if(meUserPath[ll-1] != DIR_CHAR)
         {
@@ -5511,9 +5532,9 @@ meSetupPathsAndUser(char *progname)
         }
     }
 
-    if((((ss = meGetenv ("HOME")) != NULL) && (ss[0] != '\0')) ||
+    if((((ss = _wgetenv(L"HOME")) != NULL) && (ss[0] != '\0')) ||
        ((ss = appData) != NULL))
-        fileNameSetHome(ss) ;
+        fileNameSetHome(utf8_encode(ss));
 
     /* Free off the Install Path information if defined */
     meNullFree(meInstallPath) ;
@@ -5602,9 +5623,9 @@ meIniFileEntry (meUByte *label, meUByte *value)
 static void
 meIniFileRead(void)
 {
-    char  buf1[meBUF_SIZE_MAX];
-    LPTSTR lpSectionNames;
-    LPTSTR lpTemp;
+    WCHAR  buf1[meBUF_SIZE_MAX];
+    LPWSTR lpSectionNames;
+    LPWSTR lpTemp;
     int ii;
 
     lpSectionNames = HeapAlloc (GetProcessHeap(), HEAP_ZERO_MEMORY, 0x7fff);
@@ -5612,7 +5633,7 @@ meIniFileRead(void)
     /* Process the sections from [default] or [MeYYMMDD] but not both. */
     for (ii = 0; iniSections [ii] != NULL; ii++)
     {
-        GetPrivateProfileString(iniSections [ii],NULL,"",lpSectionNames,
+        GetPrivateProfileString(utf8_decode(iniSections[ii]), NULL, L"", lpSectionNames,
                                 0x7fff, ME_INI_FILE);
         if (*lpSectionNames == '\0')
             continue;
@@ -5620,7 +5641,7 @@ meIniFileRead(void)
         /* Get all of the defaults out */
         for (lpTemp = lpSectionNames; *lpTemp; lpTemp += lstrlen(lpTemp) + 1)
         {
-            GetPrivateProfileString(iniSections [ii],lpTemp,"",
+            GetPrivateProfileString(utf8_decode(iniSections[ii]), lpTemp, L"",
                                     buf1,meBUF_SIZE_MAX,ME_INI_FILE);
             meIniFileEntry ((meUByte *)lpTemp, (meUByte *)buf1);
         }
@@ -5630,11 +5651,11 @@ meIniFileRead(void)
     }
 
     /* Get the user defaults [username] and push them into the environment. */
-    GetPrivateProfileString(meUserName,NULL,"",lpSectionNames,
+    GetPrivateProfileString(utf8_decode(meUserName), NULL, L"", lpSectionNames,
                             0x7fff, ME_INI_FILE);
     for (lpTemp = lpSectionNames; *lpTemp; lpTemp += lstrlen(lpTemp) + 1)
     {
-        GetPrivateProfileString(meUserName,lpTemp,"",buf1,meBUF_SIZE_MAX,ME_INI_FILE);
+        GetPrivateProfileString(utf8_decode(meUserName), lpTemp, L"", buf1, meBUF_SIZE_MAX, ME_INI_FILE);
         meIniFileEntry ((meUByte *)lpTemp, (meUByte *)buf1);
     }
 
@@ -5705,8 +5726,8 @@ WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmd
         wc.hIcon = LoadIcon (hInstance, MAKEINTRESOURCE(IDI_ICON1));
         wc.hCursor = NULL;
         wc.hbrBackground = GetStockObject(BLACK_BRUSH);
-        wc.lpszMenuName =  "InputMenu";
-        wc.lpszClassName = "MicroEmacsClass";
+        wc.lpszMenuName =  L"InputMenu";
+        wc.lpszClassName = L"MicroEmacsClass";
 
         if (!RegisterClass (&wc))
             return (meFALSE);
@@ -6104,13 +6125,13 @@ MainWndProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             POINT pt;                   /* Position in the window */
             WORD fcount;                /* Count of the number of files */
-            meUByte dfname [meBUF_SIZE_MAX];       /* Dropped filename */
+            WCHAR dfname [meBUF_SIZE_MAX];       /* Dropped filename */
 
             /* Get the position of the mouse */
             DragQueryPoint ((HANDLE)(wParam), &pt);
 
             /* Get the files from the drop */
-            fcount = DragQueryFile ((HANDLE)(wParam), 0xffffffff, "", 0);
+            fcount = DragQueryFile ((HANDLE)(wParam), 0xffffffff, L"", 0);
             if (fcount > 0)
             {
                 WORD ii;
@@ -6126,7 +6147,7 @@ MainWndProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                     /* Get the drag and drop buffer and add to the list */
                     dadp = (struct s_DragAndDrop *) meMalloc (sizeof (struct s_DragAndDrop) + len);
-                    strcpy (dadp->fname, dfname);
+                    strcpy (dadp->fname, utf8_encode(dfname));
                     dadp->mousePos = pt;
                     dadp->next = dadHead;
                     dadHead = dadp;
@@ -6397,25 +6418,25 @@ unhandled_message:
 void
 meFrameSetWindowTitle(meFrame *frame, meUByte *str)
 {
-    static meUByte buf [meBUF_SIZE_MAX];           /* This must be static */
-    meUByte *ss=buf ;
+    static WCHAR buf [meBUF_SIZE_MAX];           /* This must be static */
+    WCHAR *ss=buf ;
     
     if(str != NULL)
     {
-        meStrcpy(ss,str) ;
-        ss += meStrlen(ss) ;
+        wcscpy(ss, utf8_decode(str));
+        ss += lstrlen(ss) ;
     }
-    meStrcpy(ss," - ") ;
-    ss += 3 ;
+    wcscpy(ss, L" - ") ;
+    ss += 3 * sizeof(WCHAR);
 #if MEOPT_EXTENDED
     if(frameTitle != NULL)
-        meStrcpy(ss,frameTitle) ;
+        wcscpy(ss, utf8_decode(frameTitle));
     else
 #endif
 #ifdef _TITLE_VER_MINOR
         meStrcpy(ss,ME_FULLNAME " '" meVERSION "." meVERSION_MINOR) ;
 #else
-        meStrcpy(ss,ME_FULLNAME " '" meVERSION) ;
+        wcscpy(ss, utf8_decode(ME_FULLNAME " '" meVERSION));
 #endif
 
 #ifdef _ME_CONSOLE
