@@ -58,11 +58,6 @@
 #define PFONT_UNDER              0x04   /* Underline font */
 #define PFONT_MAX                0x08   /* Maximum mask for fonts */
 
-/* Set this flag to use the new way that we should enumerate fonts. This only
- * operates for NT 4.0 and Win 95. We typeically use the existing Font
- * enumeration that is good for win32s */
-#define USE_EnumFontFamiliesEx    0     /* 1 = use Ex rather then old function */
-
 /* Pain the special characters */
 typedef struct
 {
@@ -934,22 +929,13 @@ pcdDialogue (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             printDlg.hwndOwner = hWnd;
 
         pcdDeviceName(hWnd);
-#if USE_EnumFontFamiliesEx
-        /* This is the new way that we should enumerate fonts. This only
-         * operates for NT 4.0 and Win 95. We use the existing Font
-         * enumeration that is good for win32s */
-        {
-            LOGFONT logfont;
+        LOGFONT logfont;
 
-            /* Set up to default values */
-            memset (&logfont, 0, sizeof (LOGFONT));
-            logfont.lfCharSet = ttlogfont.lfCharSet;
+        /* Set up to default values */
+        memset(&logfont, 0, sizeof(LOGFONT));
+        logfont.lfCharSet = ttlogfont.lfCharSet;
 
-            EnumFontFamiliesEx (printGetDC(), &logfont, (FONTENUMPROC) pcdEnumFontFamiliesCallback, (LPARAM)dWnd, 0);
-        }
-#else
-        EnumFontFamilies (printGetDC(), NULL, (FONTENUMPROC) pcdEnumFontFamiliesCallback, (LPARAM)dWnd);
-#endif
+        EnumFontFamiliesEx(printGetDC(), &logfont, (FONTENUMPROC)pcdEnumFontFamiliesCallback, (LPARAM)dWnd, 0);
         /* Set up the rows & columns */
         SetTimer (hWnd, PRINT_TIMER_ID, PRINT_TIMER_RESPONSE, (TIMERPROC) pcdTimerCallback);
         return meTRUE;

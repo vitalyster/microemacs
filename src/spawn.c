@@ -371,47 +371,17 @@ ipipeGetChildWindow(meIPipe *ipipe)
     return ipipe->childWnd ;
 }
 
-#ifdef _WIN32s
-
-#define ipipeKillProcessTree(ppid) meFALSE
-
-#else
-
 #include <tlhelp32.h>
 
 static int
 ipipeKillProcessTree(DWORD ppid)
 {
-    typedef HANDLE (WINAPI *CREATETOOLHELP32SNAPSHOT)(DWORD,DWORD) ;
-    typedef BOOL (WINAPI *PROCESS32FIRST)(HANDLE,LPPROCESSENTRY32) ;
-    typedef BOOL (WINAPI *PROCESS32NEXT)(HANDLE,LPPROCESSENTRY32) ;
-
-    static int procGetFuncs=0 ;
-    static CREATETOOLHELP32SNAPSHOT procCreateSnapshot ;
-    static PROCESS32FIRST procGetFirst ;
-    static PROCESS32NEXT procGetNext ;
     HANDLE procSnap, procHandle ;
     PROCESSENTRY32 pe ;
     DWORD *pidList ;
     int pidCount, pidCur ;
-    
-    if(!procGetFuncs)
-    {
-        HINSTANCE libHandle ; 
-        
-        procGetFuncs = 1 ;
-        if((libHandle = LoadLibrary("kernel32")) != NULL) 
-        { 
-            procCreateSnapshot = (CREATETOOLHELP32SNAPSHOT) GetProcAddress(libHandle,"CreateToolhelp32Snapshot") ; 
-            if(((procGetFirst = (PROCESS32FIRST) GetProcAddress(libHandle,"Process32First")) == NULL) ||
-               ((procGetNext = (PROCESS32NEXT) GetProcAddress(libHandle,"Process32Next")) == NULL))
-                procCreateSnapshot = NULL ;
-        }
-    } 
-    if(procCreateSnapshot == NULL)
-        return meFALSE ;
  
-    procSnap = procCreateSnapshot(TH32CS_SNAPPROCESS,0) ; 
+    procSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0) ;
     if(procSnap == INVALID_HANDLE_VALUE)
         return meFALSE ;
     
@@ -427,7 +397,7 @@ ipipeKillProcessTree(DWORD ppid)
     pe.dwSize = sizeof(PROCESSENTRY32) ;
     do {
         ppid = pidList[pidCur] ;
-        if(!procGetFirst(procSnap,&pe)) 
+        if(!Process32First(procSnap,&pe))
             break ;
         do {
             if(pe.th32ParentProcessID == ppid)
@@ -440,7 +410,7 @@ ipipeKillProcessTree(DWORD ppid)
                 }
                 pidList[pidCount++] = pe.th32ProcessID ;
             }
-        } while(procGetNext(procSnap,&pe)) ;
+        } while(Process32Next(procSnap,&pe)) ;
     } while(++pidCur != pidCount) ;
     CloseHandle(procSnap) ;
     
@@ -452,7 +422,6 @@ ipipeKillProcessTree(DWORD ppid)
     }
     return meTRUE ;
 }
-#endif
 #endif
 
 static void
