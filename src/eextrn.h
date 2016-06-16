@@ -237,6 +237,7 @@ extern  int     doRedrawEvent(void);
 extern  int     mlwrite(int flags, meUByte *fmt, ...) ;
 #ifdef _WIN32
 extern  LPWSTR  utf8_decode(const meUByte *str);
+extern  LPWSTR  utf8_decoden(const meUByte *str, int n);
 extern  meUByte *utf8_encode(LPWSTR str);
 #ifdef _ME_WINDOW
 #define mePrintMessage(mm) MessageBox(NULL,utf8_decode(mm), utf8_decode(ME_FULLNAME " '" meVERSION), MB_OK);

@@ -196,11 +196,15 @@ meUByte ttServerCheck = 0;
 #endif
 
 LPWSTR utf8_decode(const meUByte *str) {
+	return utf8_decoden(str, -1);
+}
+LPWSTR utf8_decoden(const meUByte *str, int n) {
 	LPWSTR result;
-	int req_size = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+	int cbMultiByte = n ? n : -1;
+	int req_size = MultiByteToWideChar(CP_UTF8, 0, str, cbMultiByte, NULL, 0);
 	if (req_size > 0) {
-		result = calloc(sizeof(WCHAR), req_size);
-		if (MultiByteToWideChar(CP_UTF8, 0, str, -1, result, req_size)) {
+		result = calloc(sizeof(WCHAR), req_size + 1);
+		if (MultiByteToWideChar(CP_UTF8, 0, str, cbMultiByte, result, req_size)) {
 			return result;
 		}
 	}
@@ -711,20 +715,22 @@ ConsoleDrawString(meUByte *ss, WORD wAttribute, int x, int y, int len)
 {
     CHAR_INFO *pCI;     /* Pointer to current screen buffer location */
     BOOL bAny = meFALSE;  /* Anything to refresh? */
-    meUByte cc ;
-    int r=x+len ;
+    WCHAR cc;
+    LPWSTR buf = utf8_decoden(ss, len);
+    int wlen = len > 0 ? wcslen(buf) : 0;
+    int r=x+wlen ;
 
     /* Get pointer to correct location in screen buffer */
     pCI = &ciScreenBuffer[(y * frameCur->width) + x];
 
     /* Copy the string to the screen buffer memory, and flag any changes */
-    while (--len >= 0)
+    while (--wlen >= 0)
     {
-        if (((cc=*ss++) != pCI->Char.AsciiChar) ||
+        if (((cc=*buf++) != pCI->Char.UnicodeChar) ||
             (wAttribute != pCI->Attributes))
         {
             bAny = meTRUE;
-            pCI->Char.AsciiChar = cc ;
+            pCI->Char.UnicodeChar = cc ;
             pCI->Attributes = wAttribute;
         }
         pCI++;
