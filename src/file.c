@@ -3359,14 +3359,14 @@ getDirectoryList(meUByte *pathName, meDirList *dirList)
                     noFiles = 0 ;
                     break ;
                 }
-                if((ff = meMalloc(meStrlen(fd.cFileName)+2)) == NULL)
+                if((ff = meMalloc(wcslen(fd.cFileName)+2)) == NULL)
                 {
                     fls = NULL ;
                     noFiles = 0 ;
                     break ;
                 }
                 fls[noFiles++] = ff ;
-                strcpy(ff, utf8_encode(fd.cFileName));
+                meStrcpy(ff, utf8_encode(fd.cFileName));
                 if(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
                 {
                     ff += strlen(ff) ;
