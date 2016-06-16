@@ -1418,7 +1418,7 @@ meFrameDrawCursor(meFrame *frame, HDC hdc)
                 clientRow,
                 ETO_OPAQUE|ETO_CLIPPED,   /* Fill background */
                 &rline,                   /* Background area */
-                utf8_decode(&cc),         /* Text string */
+                utf8_decoden(&cc, 1),         /* Text string */
                 1,                        /* Length of string */
                 eCellMetrics.cellSpacing);
 
@@ -1439,7 +1439,7 @@ meFrameDrawCursor(meFrame *frame, HDC hdc)
                     clientRow,
                     ETO_CLIPPED,    /* Clip char to smaller rectangle */
                     &rline,         /* Background area */
-                    utf8_decode(&cc),/* Text string */
+                    utf8_decoden(&cc, 1),/* Text string */
                     1,              /* Length of string */
                     eCellMetrics.cellSpacing);
     }
@@ -1673,7 +1673,7 @@ meFrameDraw(meFrame *frame)
 		if((meSystemCfg & meSYSTEM_FONTFIX) && ((cc & 0xe0) == 0))
                 {
                     spFlag++ ;
-                    cc = ' ' ;
+                    cc = L' ' ;
                 }
                 tbp[col] = cc ;
             } while((--col >= scol) && (*--fschm == schm)) ;
@@ -1683,15 +1683,15 @@ meFrameDraw(meFrame *frame)
 	    length = tcol - col;
             col++;                      /* Move to current position */
 	    rline.left = eCellMetrics.cellColPos [col];
-
+            LPWSTR wstr = utf8_decoden(tbp + col, length);
 	    /* Output regular text */
 	    ExtTextOut (ps.hdc,
 			eCellMetrics.cellColPos [col], /* Text start position */
 			clientRow,
 			ETO_OPAQUE,     /* Fill background */
 			&rline,         /* Background area */
-			utf8_decode(tbp+col),        /* Text string */
-			length,         /* Length of string */
+			wstr,        /* Text string */
+			wcslen(wstr),         /* Length of string */
 			eCellMetrics.cellSpacing);
             col--;                      /* Restore position */
 
