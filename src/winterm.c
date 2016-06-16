@@ -6424,25 +6424,23 @@ unhandled_message:
 void
 meFrameSetWindowTitle(meFrame *frame, meUByte *str)
 {
-    static WCHAR buf [meBUF_SIZE_MAX];           /* This must be static */
-    WCHAR *ss=buf ;
+    WCHAR * buf = calloc(sizeof(WCHAR), UNICODE_STRING_MAX_CHARS);
     
     if(str != NULL)
     {
-        wcscpy(ss, utf8_decode(str));
-        ss += lstrlen(ss) ;
+        wcscat(buf, utf8_decode(str));
     }
-    wcscpy(ss, L" - ") ;
-    ss += 3 * sizeof(WCHAR);
+    wcscat(buf, L" - ");
+
 #if MEOPT_EXTENDED
     if(frameTitle != NULL)
-        wcscpy(ss, utf8_decode(frameTitle));
+        wcscat(buf, utf8_decode(frameTitle));
     else
 #endif
 #ifdef _TITLE_VER_MINOR
-        meStrcpy(ss,ME_FULLNAME " '" meVERSION "." meVERSION_MINOR) ;
+        wcscat(buf, utf8_decode(ME_FULLNAME " '" meVERSION "." meVERSION_MINOR));
 #else
-        wcscpy(ss, utf8_decode(ME_FULLNAME " '" meVERSION));
+        wcscat(buf, utf8_decode(ME_FULLNAME " '" meVERSION));
 #endif
 
 #ifdef _ME_CONSOLE
@@ -6455,6 +6453,7 @@ meFrameSetWindowTitle(meFrame *frame, meUByte *str)
 #ifdef _ME_WINDOW
         SetWindowText (meFrameGetWinHandle(frame), buf);        /* Change the window text */
 #endif /* _ME_WINDOW */
+    free(buf);
 }
 
 /* TTsetBgcol; Set the default fill of the background. Now in windows then we
