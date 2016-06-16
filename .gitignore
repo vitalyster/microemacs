@@ -1,9 +1,4 @@
-/src/.deps/
 /Makefile
-/autom4te.cache/
-/src/config.h
 /src/Makefile
 /src/*.o
 /src/me
-/config.status
-/config.log
