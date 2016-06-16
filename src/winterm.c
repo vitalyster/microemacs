@@ -5859,6 +5859,12 @@ WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmd
     /* Call EMACS with the command line that we have just constructed.
      * Note that we cannot delete the string that we have allocated since
      * EMACS may retain parts of the argument list. */
+	LPWSTR * argvw = CommandLineToArgvW(GetCommandLine(), &argc);
+	for (int i = 0; i < argc; i++) {
+		argv[i] = utf8_encode(argvw[i]);
+	}
+	LocalFree(argvw);
+
     mesetup (argc, argv);
 
     /* Just incase the window has been resized during start up go and check */
