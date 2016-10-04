@@ -28,7 +28,7 @@
 // Generated from the TEXTINCLUDE 2 resource.
 //
 #ifndef __BORLANDC__
-#include "WinResrc.h"
+#include "winresrc.h"
 #endif // ! __BORLANDC__
 
 #ifdef IDC_STATIC

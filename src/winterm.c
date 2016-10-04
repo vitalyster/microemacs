@@ -5866,7 +5866,8 @@ WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmd
      * Note that we cannot delete the string that we have allocated since
      * EMACS may retain parts of the argument list. */
 	LPWSTR * argvw = CommandLineToArgvW(GetCommandLine(), &argc);
-	for (int i = 0; i < argc; i++) {
+	int i;
+	for (i = 0; i < argc; i++) {
 		argv[i] = utf8_encode(argvw[i]);
 	}
 	LocalFree(argvw);
