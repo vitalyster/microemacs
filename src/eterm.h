@@ -185,6 +185,35 @@ extern	char *tgoto(char *, int, int ) ;
                         (TTbreakCnt=TTBREAKCNT,TTahead(),TTbreakFlag)))
 #if MEOPT_MOUSE
 extern void TTinitMouse(void);
+
+/**************************************************************************
+* Mouse                                                                   *
+* Shared between the console, Xlib and Cocoa back-ends.                   *
+**************************************************************************/
+/* mouseState
+ * A integer interpreted as a bit mask that holds the current state of
+ * the mouse interaction. */
+#define MOUSE_STATE_LEFT         0x0001 /* Left mouse button is pressed */
+#define MOUSE_STATE_MIDDLE       0x0002 /* Middle mouse button is pressed */
+#define MOUSE_STATE_RIGHT        0x0004 /* Right mouse button is pressed */
+#define MOUSE_STATE_BUT4         0x0008 /* Button 4 (can be used by wheel) */
+#define MOUSE_STATE_BUT5         0x0010 /* Button 5 (can be used by wheel) */
+#define MOUSE_STATE_BUTTONS      (MOUSE_STATE_LEFT|MOUSE_STATE_MIDDLE|MOUSE_STATE_RIGHT|MOUSE_STATE_BUT4|MOUSE_STATE_BUT5)
+
+extern int      mouseState ;            /* State of the mouse */
+extern meUShort mouseKeyState ;         /* State of keyboard control */
+extern meUShort mouseKeys[8] ;          /* Button number translation */
+
+#define mouseButtonPick(bb) (mouseState |=  (1<<((bb)-1)))
+#define mouseButtonDrop(bb) (mouseState &= ~(1<<((bb)-1)))
+
+#define mouseButtonGetPick()                                                 \
+((mouseState == 0)                 ? 0:                                      \
+ (mouseState & MOUSE_STATE_LEFT)   ? 1:                                      \
+ (mouseState & MOUSE_STATE_MIDDLE) ? 2:                                      \
+ (mouseState & MOUSE_STATE_RIGHT)  ? 3:                                      \
+ (mouseState & MOUSE_STATE_BUT4)   ? 4:                                      \
+ (mouseState & MOUSE_STATE_BUT5)   ? 5:0)
 #endif
 
 #ifdef _ME_CONSOLE
@@ -229,6 +258,7 @@ extern void TCAPschemeReset(void) ;
 #endif /* _ME_CONSOLE */
 
 #ifdef _ME_WINDOW
+#ifdef _XTERM
 /* Display information */
 
 typedef struct
@@ -320,6 +350,90 @@ extern void meFrameSetWindowSize(meFrame *frame) ;
 extern void meFrameRepositionWindow(meFrame *frame, int resize) ;
 #endif
 
+/* Push the accumulated drawing out to the display */
+#define meFrameGuiFlush()         XFlush(mecm.xdisplay)
+
+#endif /* _XTERM */
+
+#ifdef _COCOA
+/**************************************************************************
+* Cocoa (AppKit) display information                                      *
+*                                                                         *
+* The Cocoa back-end presents exactly the same interface to the editor    *
+* core as the Xlib one - the meFrameXTerm* entry points, the character    *
+* cell metrics in 'mecm' and the pixel/cell conversion macros. The frame  *
+* data itself is private to cocoaterm.m as it holds Objective-C objects.  *
+**************************************************************************/
+
+typedef struct meCocoaFrameData meFrameData ;
+
+typedef struct
+{
+    int       fwidth ;                  /* Font width in pixels */
+    int       fdepth ;                  /* Font depth in pixels */
+    int       fhwidth ;                 /* Font half width in pixels */
+    int       fhdepth ;                 /* Font half depth in pixels */
+    int       fadepth ;                 /* Font up-arrow depth in pixels */
+    int       ascent ;                  /* Font ascent */
+    int       descent ;                 /* Font descent */
+    int       underline ;               /* The underline position */
+    int       fontSize ;                /* Point size of the current font */
+    meUByte  *fontName ;                /* The current font name */
+} meCellMetrics ;                       /* The character cell metrics */
+
+extern meCellMetrics mecm ;
+
+#if MEOPT_COLOR
+/* Colour lookup table, the entries are packed as 0x00rrggbb */
+extern meUInt *colTable ;
+#endif
+
+/* Set of macros to interchange pixel and character spaces coordinates */
+#define colToClient(x)    (mecm.fwidth*(x))                /* Convert column char => pixel */
+#define rowToClient(y)    ((mecm.fdepth*(y))+mecm.ascent)  /* Convert row char => pixel (for text drawing) */
+#define rowToClientTop(y) (mecm.fdepth*(y))                /* Convert row char => pixel (top of row) */
+#define clientToRow(y)    ((y)/mecm.fdepth)                /* Convert row pixel => char */
+#define clientToCol(x)    ((x)/mecm.fwidth)                /* Convert column pixel => char */
+
+extern int  meFrameXTermInit(meFrame *frame, meFrame *sibling) ;
+extern void meFrameXTermFree(meFrame *frame, meFrame *sibling) ;
+extern void meFrameXTermMakeCur(meFrame *frame) ;
+extern void meFrameXTermHideCursor(meFrame *frame) ;
+extern void meFrameXTermShowCursor(meFrame *frame) ;
+extern void meFrameXTermSetScheme(meFrame *frame, meScheme scheme) ;
+extern void meFrameXTermDraw(meFrame *frame, int srow, int scol, int erow, int ecol) ;
+extern void meFrameXTermDrawSpecialChar(meFrame *frame, int x, int y, meUByte cc) ;
+extern void meCocoaDrawString(meFrame *frame, int x, int y, meUByte *str, int len) ;
+
+/* display.c hands this both 'char *' and 'meUByte *' buffers, absorb the
+ * difference here as the Xlib back-end does */
+#define meFrameXTermDrawString(frame,col,row,str,len)                         \
+    meCocoaDrawString((frame),(col),(row),(meUByte *)(str),(len))
+
+extern int  XTERMstart(void) ;
+extern int  XTERMaddColor(meColor index, meUByte r, meUByte g, meUByte b) ;
+extern void XTERMsetBgcol(void) ;
+
+/* Some extra functions, only available to a window frame */
+extern void meFrameSetWindowTitle(meFrame *frame, meUByte *str) ;
+extern void meFrameSetWindowSize(meFrame *frame) ;
+#if MEOPT_EXTENDED
+extern void meFrameRepositionWindow(meFrame *frame, int resize) ;
+#endif
+
+/* Cocoa specific support used by the rest of the UNIX terminal layer */
+extern void meCocoaFlush(void) ;
+extern void meCocoaEventHandler(void) ;
+extern int  meCocoaEventsPending(void) ;
+extern void meCocoaWaitEvent(int msec) ;
+extern void meCocoaSetMouseCursor(meUByte cursor) ;
+extern meUByte *meCocoaResourcePath(void) ;
+
+/* Push the accumulated drawing out to the display */
+#define meFrameGuiFlush()         meCocoaFlush()
+
+#endif /* _COCOA */
+
 #ifdef _CLIPBRD
 extern void TTgetClipboard(void);
 extern void TTsetClipboard(void);
@@ -332,7 +446,7 @@ extern int  TTstart(void) ;
 #define TTend()               ((meSystemCfg & meSYSTEM_CONSOLE) ? TCAPclose():0)
 #define TTopen()              ((meSystemCfg & meSYSTEM_CONSOLE) ? TCAPopen():0)
 #define TTclose()             ((meSystemCfg & meSYSTEM_CONSOLE) ? TCAPclose():0)
-#define TTflush()             ((meSystemCfg & meSYSTEM_CONSOLE) ? TCAPflush():(XFlush(mecm.xdisplay),1))
+#define TTflush()             ((meSystemCfg & meSYSTEM_CONSOLE) ? TCAPflush():(meFrameGuiFlush(),1))
 #define TThideCur()           ((meSystemCfg & meSYSTEM_CONSOLE) ? TCAPhideCur():meFrameXTermHideCursor(frameCur))
 #define TTshowCur()           ((meSystemCfg & meSYSTEM_CONSOLE) ? TCAPshowCur():meFrameXTermShowCursor(frameCur))
 #define TTaddColor(i,r,g,b)   ((meSystemCfg & meSYSTEM_CONSOLE) ? TCAPaddColor(i,r,g,b):XTERMaddColor(i,r,g,b))
@@ -348,7 +462,7 @@ extern int  TTstart(void) ;
 #define TTend()     
 #define TTopen()    
 #define TTclose()   
-#define TTflush()             XFlush(mecm.xdisplay)
+#define TTflush()             meFrameGuiFlush()
 #define TThideCur()           meFrameXTermHideCursor(frameCur)
 #define TTshowCur()           meFrameXTermShowCursor(frameCur)
 #define TTaddColor(i,r,g,b)   XTERMaddColor(i,r,g,b)

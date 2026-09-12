@@ -678,7 +678,7 @@ extern int      rcsCiCoFile(int f, int n) ;
 #else
 #define rcsCiCoFile notAvailable
 #endif
-#if (defined _XTERM) || (defined _DOS) || (defined _WIN32)
+#if (defined _XTERM) || (defined _COCOA) || (defined _DOS) || (defined _WIN32)
 extern int      changeFont(int f, int n);
 #else
 #define changeFont notAvailable

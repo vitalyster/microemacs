@@ -98,6 +98,9 @@ static char meHelpPage[]=
 #ifdef _XTERM
 "  -n      : For no X window, use console instead\n"
 #endif
+#ifdef _COCOA
+"  -n      : For no macOS window, use console instead\n"
+#endif
 #endif /* _ME_CONSOLE */
 #endif /* _ME_WINDOW */
 #if MEOPT_CLIENTSERVER
@@ -711,7 +714,7 @@ exitEmacs(int f, int n)
 
             meNullFree(mlBinds) ;
             meFree(hilBlock) ;
-#ifdef _XTERM
+#ifdef _ME_GUI
             meNullFree(colTable) ;
 #endif
             meNullFree(disLineBuff) ;

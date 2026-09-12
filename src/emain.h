@@ -200,6 +200,17 @@
 #endif
 
 /**************************************************************************
+* UNIX : macOS overrides                                                  *
+* macOS is a FreeBSD derivative but the native window system is AppKit    *
+* (Cocoa) rather than X11, so the Xlib backend is swapped out for the     *
+* Cocoa one - see cocoaterm.m.                                            *
+**************************************************************************/
+#ifdef _DARWIN
+#undef  _XTERM                          /* Not Xlib, Cocoa - see below   */
+#define _COCOA         1                /* Use AppKit/CoreText           */
+#endif /* _DARWIN */
+
+/**************************************************************************
 * UNIX : AIX                                                              *
 **************************************************************************/
 #ifdef _AIX
@@ -376,6 +387,27 @@
 #include <X11/keysym.h>         /* Keyboard symbols                      */
 #include <X11/Xutil.h>
 #endif /* _XTERM */
+
+/*************************************************************************
+ * Cocoa Setup - Definitions required for the macOS AppKit support       *
+ *************************************************************************/
+#ifndef _ME_WINDOW              /* console only mode?                    */
+#undef _COCOA                   /* Do not want AppKit                    */
+#endif
+#ifdef _COCOA
+#define _MOUSE          1       /* Mouse supported on Cocoa              */
+#define _CLIPBRD        1       /* Inter window clip board supp          */
+#define _WINDOW         1       /* Window, need resizing & title code    */
+#define _MULTI_WINDOW   1       /* can support multiple window frames    */
+#endif /* _COCOA */
+
+/* _ME_GUI is set whenever a bit-mapped (as opposed to character cell)
+ * display back-end is in use on UNIX. The rendering code in display.c and
+ * osd.c is identical for Xlib and Cocoa, only the primitives it is built
+ * from differ, so the shared sections are guarded with this. */
+#if (defined _XTERM) || (defined _COCOA)
+#define _ME_GUI         1
+#endif
 
 #ifndef _ME_CONSOLE             /* window only mode?                     */
 #undef _TCAP                    /* Do not want Termcap                   */

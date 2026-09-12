@@ -4,3 +4,6 @@ CMakeCache.txt
 **/Makefile
 /src/*.o
 /src/me
+/build/
+*.app/
+.DS_Store

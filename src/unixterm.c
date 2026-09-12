@@ -278,35 +278,15 @@ static void meSetIconState (Display *display, Window window);
 * Mouse                                                                   *
 **************************************************************************/
 #if MEOPT_MOUSE
-/* Local definitions for mouse handling code */
-/* mouseState
- * A integer interpreted as a bit mask that holds the current state of
- * the mouse interaction. */
-#define MOUSE_STATE_LEFT         0x0001 /* Left mouse button is pressed */
-#define MOUSE_STATE_MIDDLE       0x0002 /* Middle mouse button is pressed */
-#define MOUSE_STATE_RIGHT        0x0004 /* Right mouse button is pressed */
-#define MOUSE_STATE_BUT4         0x0008 /* Button 4 (can be used by wheel) */
-#define MOUSE_STATE_BUT5         0x0010 /* Button 5 (can be used by wheel) */
-#define MOUSE_STATE_BUTTONS      (MOUSE_STATE_LEFT|MOUSE_STATE_MIDDLE|MOUSE_STATE_RIGHT|MOUSE_STATE_BUT4|MOUSE_STATE_BUT5)
-
+/* The mouse state and the macros that manipulate it live in eterm.h so that
+ * they are shared with the Cocoa back-end, see meMOUSE_STATE_*. */
 int  mouseState = 0;             /* State of the mouse. */
 
 /* mouseKeyState
  * The state of the control keys when the mouse was pressed. */
 meUShort mouseKeyState;          /* State of keyboard control */
 
-static meUShort mouseKeys[8] = { 0, 1, 2, 3, 4, 5 } ;
-#define mouseButtonPick(bb) (mouseState |=  (1<<((bb)-1)))
-#define mouseButtonDrop(bb) (mouseState &= ~(1<<((bb)-1)))
-
-#define mouseButtonGetPick()                                                   \
-((mouseState == 0)                 ? 0:                                      \
- (mouseState & MOUSE_STATE_LEFT)   ? 1:                                      \
- (mouseState & MOUSE_STATE_MIDDLE) ? 2:                                      \
- (mouseState & MOUSE_STATE_RIGHT)  ? 3:                                      \
- (mouseState & MOUSE_STATE_BUT4)   ? 4:                                      \
- (mouseState & MOUSE_STATE_BUT5)   ? 5:0)
-
+meUShort mouseKeys[8] = { 0, 1, 2, 3, 4, 5 } ;
 #endif
 
 /** 
@@ -558,7 +538,17 @@ meSetupPathsAndUser(char *progname)
             buff[ii] = '\0' ;
             ll = mePathAddSearchPath(ll,evalResult,buff,&gotUserPath) ;
         }
-        
+
+#ifdef _COCOA
+        /* When running from an application bundle the macros are installed in
+         * Contents/Resources, which is not a sibling of the executable */
+        if((ss = meCocoaResourcePath()) != NULL)
+        {
+            meStrcpy(buff,ss) ;
+            ll = mePathAddSearchPath(ll,evalResult,buff,&gotUserPath) ;
+        }
+#endif /* _COCOA */
+
 #if MEOPT_BINFS
         /* also check for the built-in file system */
         ll = mePathAddSearchPath(ll,evalResult,(meUByte *) "{BFS}",&gotUserPath) ;
@@ -639,6 +629,35 @@ meGidInGidList(gid_t gid)
     return 0 ;
 }
 
+#ifdef _COCOA
+/*
+ * meCocoaPollInterval
+ * Work out how long the AppKit event loop may sleep for. The editors timers
+ * are driven off SIGALRM which will not break us out of the AppKit wait, so
+ * the wait is always bounded by the next timer expiry. A second is used as
+ * the backstop so that the die test is still polled when nothing is running.
+ */
+static int
+meCocoaPollInterval(void)
+{
+    int ms = 1000 ;
+
+    if(timers != NULL)
+    {
+        struct meTimeval tp ;
+        meInt now ;
+
+        gettimeofday(&tp,NULL) ;
+        now = ((tp.tv_sec-startTime)*1000) + (tp.tv_usec/1000) ;
+        if((now = ((meInt) timers->abstime) - now) < TIMER_MIN)
+            ms = TIMER_MIN ;
+        else if(now < ms)
+            ms = (int) now ;
+    }
+    return ms ;
+}
+#endif /* _COCOA */
+
 static void
 waitForEvent(int mode)
 {
@@ -670,7 +689,14 @@ waitForEvent(int mode)
 
         TTdieTest() ;
         FD_ZERO(&select_set);
-        FD_SET(meStdin, &select_set);
+#ifdef _COCOA
+        /* In window mode the keyboard arrives through the AppKit event queue
+         * rather than a file descriptor, so stdin is left out of the set */
+        if(meSystemCfg & meSYSTEM_CONSOLE)
+#endif /* _COCOA */
+        {
+            FD_SET(meStdin, &select_set);
+        }
         pfd = meStdin ;
 #if MEOPT_IPIPES
         ipipeEvent = 0 ;
@@ -695,6 +721,47 @@ waitForEvent(int mode)
             return ;
 #endif
         pfd++ ;
+#ifdef _COCOA
+        if(!(meSystemCfg & meSYSTEM_CONSOLE))
+        {
+            struct timeval tv ;
+            int nfd ;
+
+            /* An incremental pipe is a plain file descriptor and is not a run
+             * loop source, so poll the pipes first and only sleep in AppKit
+             * when they have nothing for us. */
+            tv.tv_sec = 0 ;
+            tv.tv_usec = 0 ;
+            nfd = select(pfd,&select_set,NULL,NULL,&tv) ;
+            if(nfd <= 0)
+#if MEOPT_IPIPES
+                /* Whilst a pipe is running the poll has to be brisk */
+                meCocoaWaitEvent((ipipes != NULL) ? 20:meCocoaPollInterval()) ;
+#else
+                meCocoaWaitEvent(meCocoaPollInterval()) ;
+#endif
+#if MEOPT_IPIPES
+            else
+            {
+                ipipe = ipipes ;
+                while(ipipe != NULL)
+                {
+                    pp = ipipe->next ;
+                    /* See if theres anything to read, if so read it */
+                    if(FD_ISSET(ipipe->rfd,&select_set) || (ipipe->pid < 0))
+                    {
+                        ipipeRead(ipipe) ;
+                        ipipeEvent = 1 ;
+                    }
+                    ipipe = pp ;
+                }
+                if(ipipeEvent && mode)
+                    return ;
+            }
+#endif
+            continue ;
+        }
+#endif /* _COCOA */
         if(select(pfd,&select_set,NULL,NULL,NULL) >= 0)
         {
             int ii;
@@ -2918,13 +2985,9 @@ TTinitMouse(void)
 #ifdef _ME_WINDOW
         if(meMouseCfg & meMOUSE_ENBLE)
     {
-#ifdef _XTERM
-        static meUByte  meCurCursor=0 ;
-        static Cursor meCursors[meCURSOR_COUNT]={0,0,0,0,0,0,0} ;
-        static meUByte  meCursorChar[meCURSOR_COUNT]={
-            0,XC_arrow,XC_xterm,XC_crosshair,XC_hand2,XC_watch,XC_pirate} ;
-        meUByte cc ;
+#ifdef _ME_GUI
         int b1, b2, b3 ;
+        meUByte cc ;
 
         if(meMouseCfg & meMOUSE_SWAPBUTTONS)
             b1 = 3, b3 = 1 ;
@@ -2941,6 +3004,16 @@ TTinitMouse(void)
         cc = (meUByte) ((meMouseCfg & meMOUSE_ICON) >> 16) ;
         if(cc >= meCURSOR_COUNT)
             cc = 0 ;
+#endif /* _ME_GUI */
+#ifdef _COCOA
+        meCocoaSetMouseCursor(cc) ;
+#endif /* _COCOA */
+#ifdef _XTERM
+        static meUByte  meCurCursor=0 ;
+        static Cursor meCursors[meCURSOR_COUNT]={0,0,0,0,0,0,0} ;
+        static meUByte  meCursorChar[meCURSOR_COUNT]={
+            0,XC_arrow,XC_xterm,XC_crosshair,XC_hand2,XC_watch,XC_pirate} ;
+
         if(cc != meCurCursor)
         {
             if(meCurCursor)
@@ -3828,8 +3901,31 @@ TTgetClipboard(void)
 int
 TTstart(void)
 {
-    if((meSystemCfg & meSYSTEM_CONSOLE) || (meGetenv("DISPLAY") == NULL))
+    if((meSystemCfg & meSYSTEM_CONSOLE)
+#ifdef _XTERM
+       || (meGetenv("DISPLAY") == NULL)
+#endif /* _XTERM */
+       )
         return TCAPstart() ;
+#ifdef _COCOA
+#ifdef _USG
+    /* Copy the Terminal I/O. We may spawn a terminal in the window later and
+     * the termio structure must be initialised. The structure may be
+     * uninitialised if we have been launched off the desktop via an open
+     * action. */
+    TCAPgetattr (&otermio, 1);
+#endif /* _USG */
+#ifdef _TCAP
+    /* When the window version of ME has to die using meDie (using killing it
+     * etc) it cannot write to the window as it may have gone. Therefore the
+     * die messages "*** Emergency..." are written to the terminal. This is
+     * done by setting the meSystem variable to a value which make it use
+     * TCAP, but TCAP has not been initialise and mlwrite will use TCAPmove so
+     * we must initialise the TCAPcup (cursor move string) to something to
+     * stop it core-dumping. */
+    tcaptab[TCAPcup].code.str = "" ;
+#endif /* _TCAP */
+#endif /* _COCOA */
     return XTERMstart() ;
 }
 #endif /* _ME_CONSOLE */
@@ -3957,6 +4053,11 @@ TTahead(void)
     if(!(meSystemCfg & meSYSTEM_CONSOLE))
 #endif /* _ME_CONSOLE */
     {
+#ifdef _COCOA
+        /* Drain the AppKit event queue, this turns window server events into
+         * editor keys, mouse events and repaints */
+        meCocoaEventHandler() ;
+#endif /* _COCOA */
 #ifdef _XTERM
         int ii ;
         while((ii=XPending(mecm.xdisplay)))
@@ -3965,6 +4066,8 @@ TTahead(void)
                 meXEventHandler() ;
             while(--ii > 0) ;
         }
+#endif /* _XTERM */
+#ifdef _ME_GUI
         /* don't process the timers if we have a key waiting!
          * This is because the timers can generate a lot of timer
          * keys, filling up the input buffer - these are not wanted.
@@ -3996,7 +4099,7 @@ TTahead(void)
             }
         }
 #endif /* MEOPT_MOUSE */
-#endif /* _XTERM */
+#endif /* _ME_GUI */
     }
 #ifdef _ME_CONSOLE
     else

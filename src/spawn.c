@@ -224,7 +224,29 @@ meShell(int f, int n)
         }
     }
     else
-#endif
+#endif /* _XTERM */
+#ifdef _COCOA
+    if(!(meSystemCfg & meSYSTEM_CONSOLE))
+    {
+        /* There is no terminal attached to the window so hand the job to
+         * Terminal.app, which is the macOS equivalent of firing off an
+         * xterm. It is opened on the current directory. */
+        switch(fork())
+        {
+        case 0:
+            /* we want the children to die on interrupt */
+            execl("/usr/bin/open", "open", "-a", "Terminal", (char *) curdir, NULL);
+            mlwrite(MWABORT,(meUByte *)"exec failed, %s", strerror(errno));
+            meExit(127);
+        case -1:
+            ss = mlwrite(MWABORT,(meUByte *)"fork failed, %s", strerror(errno));
+            break ;
+        default:
+            ss = meTRUE ;
+        }
+    }
+    else
+#endif /* _COCOA */
     {
 	TTclose();				/* stty to old settings */
 	ss = system((char *)getShellCmd()) ;

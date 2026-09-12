@@ -834,9 +834,9 @@ menuRenderArea(int x, int y, int len, int dep)
 #ifdef _ME_CONSOLE
     if(!(meSystemCfg & meSYSTEM_CONSOLE))
 #endif /* _ME_CONSOLE */
-#ifdef _XTERM
+#ifdef _ME_GUI
         meFrameXTermDraw(frameCur,y,x,y+dep,x+len) ;
-#endif /* _XTERM */
+#endif /* _ME_GUI */
 #ifdef _ME_CONSOLE
     else
 #endif /* _ME_CONSOLE */

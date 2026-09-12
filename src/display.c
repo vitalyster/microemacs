@@ -908,9 +908,9 @@ hideLineJump:
 #endif /* _ME_CONSOLE */
 #ifdef _ME_WINDOW
     {
-#ifdef _XTERM
+#ifdef _ME_GUI
         /********************************************************************
-         * X-WINDOWS                                                        *
+         * X-WINDOWS / COCOA                                                *
          ********************************************************************/
         register int ii, len, col, cno ;
         register meScheme scheme ;
@@ -1006,7 +1006,7 @@ hideLineJump:
             ii = 0 ;
         meFrameXTermDrawString(frameCur,colToClient(scol+col+ii-1),row,&drawno,1);
 #endif
-#endif /* _XTERM */
+#endif /* _ME_GUI */
     }
 #endif /* _ME_WINDOW */
 
@@ -1809,9 +1809,9 @@ updateScrollBar (meWindow *wp)
 #endif /* _ME_CONSOLE */
 #ifdef _ME_WINDOW
             {
-#ifdef _XTERM
+#ifdef _ME_GUI
                 /************************************************************
-                 * X-WINDOWS                                                *
+                 * X-WINDOWS / COCOA                                        *
                  ************************************************************/
                 meFrameXTermSetScheme(frameCur,scheme) ;
 
@@ -1853,7 +1853,7 @@ updateScrollBar (meWindow *wp)
                     }
                     meFrameXTermDrawString(frameCur,colToClient(col),rowToClient(row),wbase,len);
                 }
-#endif /* _XTERM */
+#endif /* _ME_GUI */
             }
 #endif /* _ME_WINDOW */
 #endif /* _UNIX */
@@ -2423,9 +2423,9 @@ pokeScreen(int flags, int row, int col, meUByte *scheme,
 #endif /* _ME_CONSOLE */
 #ifdef _ME_WINDOW
         {
-#ifdef _XTERM
+#ifdef _ME_GUI
             /****************************************************************
-             * X-WINDOWS                                                    *
+             * X-WINDOWS / COCOA                                            *
              ****************************************************************/
             col = colToClient(col) ;
             row = rowToClient(row) ;
@@ -2474,7 +2474,7 @@ pokeScreen(int flags, int row, int col, meUByte *scheme,
                     col += mecm.fwidth ;
                 }
             }
-#endif /* _XTERM */
+#endif /* _ME_GUI */
         }
 #endif /* _ME_WINDOW */
 
@@ -2574,9 +2574,9 @@ pokeScreen(int flags, int row, int col, meUByte *scheme,
 #endif /* _ME_CONSOLE */
 #ifdef _ME_WINDOW
         {
-#ifdef _XTERM
+#ifdef _ME_GUI
             /****************************************************************
-             * X-WINDOWS                                                    *
+             * X-WINDOWS / COCOA                                            *
              ****************************************************************/
             meFrameXTermSetScheme(frameCur,schm) ;
             if (meSystemCfg & meSYSTEM_FONTFIX)
@@ -2614,7 +2614,7 @@ pokeScreen(int flags, int row, int col, meUByte *scheme,
                 while (--len >= 0)
                     *fssp++ = schm ;
             }
-#endif /* _XTERM */
+#endif /* _ME_GUI */
         }
 #endif /* _ME_WINDOW */
 #endif /* _UNIX */

@@ -529,7 +529,7 @@ setVar(meUByte *vname, meUByte *vvalue, meRegister *regs)
                     displayNewLine = ' ';
                     displaySpace = ' ';    
                 }
-#ifdef _XTERM
+#ifdef _ME_GUI
                 /* on unix, if using x-window then can't set ANSI || XANSI bits */
                 if(!(meSystemCfg & meSYSTEM_CONSOLE))
                     meSystemCfg &= ~(meSYSTEM_ANSICOLOR|meSYSTEM_XANSICOLOR) ;
