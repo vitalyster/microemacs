@@ -2358,7 +2358,7 @@ ffWriteFileOpen(meUByte *fname, meUInt flags, meBuffer *bp)
                                 if(meRename(filename,filename2) && (ffFileOp(filename,filename2,meRWFLAG_DELETE,-1) <= 0))
                                 {
                                     mlwrite(MWABORT|MWPAUSE,(meUByte *)"[Unable to backup file to %s (%d - %s)]",
-                                            filename2,errno,sys_errlist[errno]) ;
+                                            filename2,errno,strerror(errno)) ;
                                     if(meUnlink(filename))
                                     {
                                         mlwrite(MWABORT|MWPAUSE,(meUByte *)"[Unable to remove backup file %s]", filename) ;
@@ -2373,7 +2373,7 @@ ffWriteFileOpen(meUByte *fname, meUInt flags, meBuffer *bp)
                         mlwrite(MWABORT|MWPAUSE,(meUByte *)"[Unable to remove backup file %s]", filename) ;
                     else if(meRename(filenameOld,filename) && (ffFileOp(filenameOld,filename,meRWFLAG_DELETE,-1) <= 0))
                         mlwrite(MWABORT|MWPAUSE,(meUByte *)"[Unable to backup file to %s (%d - %s)]",
-                                filename,errno,sys_errlist[errno]) ;
+                                filename,errno,strerror(errno)) ;
                     else if(bp != NULL)
                     {
                         meUShort ss;

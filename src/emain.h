@@ -602,10 +602,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef _meDEF_SYS_ERRLIST
-extern const char *sys_errlist[];
-#endif
-
 /* Standard Types */
 typedef   signed char  meByte ;
 typedef unsigned char  meUByte ;
