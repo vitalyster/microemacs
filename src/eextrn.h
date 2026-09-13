@@ -189,6 +189,8 @@ extern  meUByte assessModeLine(meUByte *ml) ;
 extern  void    windCurLineOffsetEval(meWindow *wp) ;
 extern  void    reframe(meWindow *wp) ;
 extern  void    updCursor(register meWindow *wp) ;
+extern  int     displayPutChar(int col, const meUByte *src, int remaining, meUByte cc, int tw);
+extern  int     displayCharWidth(int col, const meUByte *src, int remaining, meUByte cc, int tw);
 extern  int     renderLine(meUByte *s, int len, int wid, meBuffer *bp);
 extern	int	screenUpdate(int f, int n);
 extern	int	update(int force);
@@ -1020,6 +1022,10 @@ extern	int	meUndo(int f, int n);
 #define meUndo notAvailable
 #endif
 
+/* utf8.c externals */
+extern	unsigned	meUtf8Decode(const meUByte *ss, int index, int len, meUInt *res) ;
+extern	unsigned	meUtf8Encode(meUInt c, meUByte *buf) ;
+
 /* window.c externals */
 extern  void    meWindowMakeCurrent(meWindow *wp) ;
 extern  void    frameAddModeToWindows(int mode) ;
@@ -1388,6 +1394,11 @@ extern int                  putenv(const char *s);
 #define isPokable(c)     (charMaskTbl1[((meUByte) (c))] & CHRMSK_POKABLE)
 #define isPrint(c)       (charMaskTbl1[((meUByte) (c))] & CHRMSK_PRINTABLE)
 #define isSpace(c)       (charMaskTbl1[((meUByte) (c))] & CHRMSK_SPACE)
+
+/* True unless 'c' is a UTF-8 continuation byte (10xxxxxx); true for both
+ * plain ASCII and the lead byte of a multi-byte sequence, so it marks
+ * where one character's bytes end and the next one's begin */
+#define meUtf8IsLead(c)  ((((meUByte) (c)) & 0xc0) != 0x80)
 
 #define inWord()         (isWord(meLineGetChar(frameCur->windowCur->dotLine, frameCur->windowCur->dotOffset)))
 #define inPWord()        ((meLineGetChar(frameCur->windowCur->dotLine, frameCur->windowCur->dotOffset)) > ' ')

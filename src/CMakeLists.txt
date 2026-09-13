@@ -39,6 +39,7 @@ set (SRCS abbrev.c
           tag.c
           time.c
           undo.c
+          utf8.c
           window.c
           word.c)
 

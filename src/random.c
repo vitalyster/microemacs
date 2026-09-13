@@ -434,18 +434,27 @@ int
 getcol(meUByte *ss, int off, int tabWidth)
 {
     register int c, col=0 ;
-    
-    while(off--)
+    register int ii=0 ;
+
+    while(ii < off)
     {
-        c = *ss++ ;
+        c = ss[ii] ;
         if(isDisplayable(c))
+        {
+            meUInt uc ;
+            ii += meUtf8Decode(ss,ii,off,&uc) ;
             col++ ;
-        else if(c == meCHAR_TAB)
-            col += get_tab_pos(col, tabWidth) + 1 ;
-        else if (c  < 0x20)
-            col += 2 ;
+        }
         else
-            col += 4 ;
+        {
+            if(c == meCHAR_TAB)
+                col += get_tab_pos(col, tabWidth) + 1 ;
+            else if (c  < 0x20)
+                col += 2 ;
+            else
+                col += 4 ;
+            ii++ ;
+        }
     }
     return col ;
 }
@@ -457,27 +466,35 @@ setccol(int pos)
     register int i; 	/* index into current line */
     register int col;	/* current cursor column   */
     register int llen;	/* length of line in bytes */
-    
+
     col = 0;
+    i = 0 ;
     llen = meLineGetLength(frameCur->windowCur->dotLine);
-    
+
     /* scan the line until we are at or past the target column */
-    for (i = 0; i < llen; ++i)
+    while(i < llen)
     {
         /* advance one character */
         c = meLineGetChar(frameCur->windowCur->dotLine, i);
         if(isDisplayable(c))
+        {
+            meUInt uc ;
+            i += meUtf8Decode(frameCur->windowCur->dotLine->text,i,llen,&uc) ;
             col++ ;
-        else if(c == meCHAR_TAB)
-            col += get_tab_pos(col, frameCur->bufferCur->tabWidth) + 1 ;
-        else if (c  < 0x20)
-            col += 2 ;
+        }
         else
-            col += 4 ;
+        {
+            if(c == meCHAR_TAB)
+                col += get_tab_pos(col, frameCur->bufferCur->tabWidth) + 1 ;
+            else if (c  < 0x20)
+                col += 2 ;
+            else
+                col += 4 ;
+            i++ ;
+        }
         /* upon reaching the target, drop out */
         if (col > pos)
             break;
-        
     }
     /* set the new position */
     frameCur->windowCur->dotOffset = i;

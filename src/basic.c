@@ -72,7 +72,7 @@ int
 meWindowBackwardChar(register meWindow *wp, register int n)
 {
     register meLine   *lp;
-    
+
     while (n--)
     {
         if(wp->dotOffset == 0)
@@ -87,6 +87,9 @@ meWindowBackwardChar(register meWindow *wp, register int n)
         else
         {
             wp->dotOffset-- ;
+            while((wp->dotOffset > 0) &&
+                  !meUtf8IsLead(meLineGetChar(wp->dotLine,wp->dotOffset)))
+                wp->dotOffset-- ;
             wp->updateFlags |= WFMOVEC ;
         }
     }
@@ -106,10 +109,15 @@ meWindowForwardChar(register meWindow *wp, register int n)
             wp->dotLine = meLineGetNext(wp->dotLine);
             wp->dotOffset = 0;
             wp->updateFlags |= WFMOVEL ;
-        } 
+        }
         else
         {
+            register int len = meLineGetLength(wp->dotLine) ;
+
             wp->dotOffset++;
+            while((wp->dotOffset < len) &&
+                  !meUtf8IsLead(meLineGetChar(wp->dotLine,wp->dotOffset)))
+                wp->dotOffset++ ;
             wp->updateFlags |= WFMOVEC ;
         }
     }

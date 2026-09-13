@@ -1429,45 +1429,11 @@ findToken(meHilight *root, meUByte *text, meUByte mode,
     return NULL ;
 }
 
-#define __hilCopyChar(dstPos,cc,tw)                                          \
-do                                                                           \
-{                                                                            \
-    /* the largest character size is a tab which is user definable */        \
-    if(dstPos >= disLineSize)                                                \
-    {                                                                        \
-        disLineSize += 512 ;                                                 \
-        disLineBuff = meRealloc(disLineBuff,disLineSize+32) ;                \
-    }                                                                        \
-    if(isDisplayable(cc))                                                    \
-    {                                                                        \
-        if(cc == ' ')                                                        \
-            disLineBuff[dstPos++] = displaySpace ;                           \
-        else if(cc == meCHAR_TAB)                                            \
-            disLineBuff[dstPos++] = displayTab ;                             \
-        else                                                                 \
-            disLineBuff[dstPos++] = cc ;                                     \
-    }                                                                        \
-    else if(cc == meCHAR_TAB)                                                \
-    {                                                                        \
-        int ii=get_tab_pos(dstPos,tw) ;                                      \
-        disLineBuff[dstPos++] = displayTab ;                                 \
-        while(--ii >= 0)                                                     \
-            disLineBuff[dstPos++] = ' ' ;                                    \
-    }                                                                        \
-    else if(cc < 0x20)                                                       \
-    {                                                                        \
-        disLineBuff[dstPos++] = '^' ;                                        \
-        disLineBuff[dstPos++] = cc ^ 0x40 ;                                  \
-    }                                                                        \
-    else                                                                     \
-    {                                                                        \
-        /* Its a nasty character */                                          \
-        disLineBuff[dstPos++] = '\\' ;                                       \
-        disLineBuff[dstPos++] = 'x' ;                                        \
-        disLineBuff[dstPos++] = hexdigits[cc/0x10] ;                         \
-        disLineBuff[dstPos++] = hexdigits[cc%0x10] ;                         \
-    }                                                                        \
-}                                                                            \
+#define __hilCopyChar(dstPos,src,remaining,cc,tw)                           \
+do                                                                          \
+{                                                                           \
+    (dstPos) = displayPutChar((dstPos), (src), (remaining), (cc), (tw)) ;   \
+}                                                                           \
 while(0)
 
 /*
@@ -1508,13 +1474,14 @@ hilSchemeChange (meHilight *node, HILDATA *hd)
 }
 
 static int
-hilCopyChar(register int dstPos, register meUByte cc, HILDATA *hd)
+hilCopyChar(register int dstPos, register meUByte cc, register meUByte *srcText,
+            register int remaining, HILDATA *hd)
 {
     /* Change the selection hilight if required. */
     if ((hd->srcOff != 0xffff) && (hd->srcPos >= hd->srcOff))
         hd->hfunc (dstPos, hd);
     /* Copy the character. */
-    __hilCopyChar(dstPos,cc,hd->tabWidth);
+    __hilCopyChar(dstPos,srcText,remaining,cc,hd->tabWidth);
     return dstPos ;
 }
 
@@ -1525,7 +1492,8 @@ hilCopyReplaceString(int sDstPos, register meUByte *srcText,
     int dstPos = sDstPos ;
     int hoff, dstLen ;
     meUByte cc ;
-    
+    int sourceRemaining ;
+
     if((hd->srcOff != 0xffff) && (hd->srcPos+len >= hd->srcOff))
     {
         /* as the source len and destination len could be different, the best
@@ -1546,6 +1514,7 @@ hilCopyReplaceString(int sDstPos, register meUByte *srcText,
     }
     else
         hoff = 0x7fffffff ;
+    sourceRemaining = meStrlen(srcText) ;
     while((cc = *srcText++) != '\0')
     {
         if((cc == meCHAR_LEADER) && ((cc=*srcText++) != meCHAR_TRAIL_LEADER))
@@ -1564,7 +1533,7 @@ hilCopyReplaceString(int sDstPos, register meUByte *srcText,
             else
                 hoff = 0x7fffffff ;
         }
-        __hilCopyChar(dstPos,cc,hd->tabWidth);
+        __hilCopyChar(dstPos,srcText-1,sourceRemaining--,cc,hd->tabWidth);
     }
     /* This is not quite right - but will have to do for present. Change
      * the hilighting according to the ammount of text used. */
@@ -1585,14 +1554,14 @@ hilCopyString(register int dstPos, register meUByte *srcText,HILDATA *hd)
         {
             if (hd->srcOff <= srcPos)
                 (hd->hfunc)(dstPos, hd);
-            __hilCopyChar(dstPos,cc,hd->tabWidth);
+            __hilCopyChar(dstPos,srcText-1,meStrlen(srcText-1),cc,hd->tabWidth);
             srcPos++;
         }
     }
     else
     {
         while((cc = *srcText++) != '\0')
-            __hilCopyChar(dstPos,cc,hd->tabWidth);
+            __hilCopyChar(dstPos,srcText-1,meStrlen(srcText-1),cc,hd->tabWidth);
     }
     return dstPos ;
 }
@@ -1615,7 +1584,7 @@ hilCopyLenString(register int dstPos, register meUByte *srcText,
                 (hd->hfunc)(dstPos, hd);
             
             cc = *srcText++ ;
-            __hilCopyChar(dstPos,cc,hd->tabWidth);
+            __hilCopyChar(dstPos,srcText-1,len-(srcPos-hd->srcPos),cc,hd->tabWidth);
             srcPos++;
         }
     }
@@ -1624,7 +1593,7 @@ hilCopyLenString(register int dstPos, register meUByte *srcText,
         while(len--)
         {
             cc = *srcText++ ;
-            __hilCopyChar(dstPos,cc,hd->tabWidth);
+            __hilCopyChar(dstPos,srcText-1,1,cc,hd->tabWidth);
         }
     }
     return dstPos ;
@@ -1866,12 +1835,13 @@ BracketJump:
                     if((tt == '\0') || (hd.srcPos == srcWid))
                         break ;
                     ss = *s1++ ;
-                    dstPos = hilCopyChar(dstPos,ss, &hd) ;
+                    dstPos = hilCopyChar(dstPos,ss,s1-1,srcWid-hd.srcPos,&hd) ;
                     if(ss == ignore)
                     {
                         if(++hd.srcPos == srcWid)
                             break ;
-                        dstPos = hilCopyChar(dstPos,*s1++,&hd) ;
+                        dstPos = hilCopyChar(dstPos,*s1,s1,srcWid-hd.srcPos,&hd) ;
+                        s1++ ;
                     }
                 }
                 if(tt != '\0')
@@ -1975,7 +1945,7 @@ advance_char:
             mode &= ~(meHIL_MODEMOVE|meHIL_MODESTART|meHIL_MODETOKEND) ;
             if((mode & meHIL_MODESTTLN) && !isSpace(cc))
                 mode &= ~meHIL_MODESTTLN ;
-            dstPos = hilCopyChar(dstPos,cc, &hd) ;
+            dstPos = hilCopyChar(dstPos,cc,srcText+hd.srcPos,srcWid-hd.srcPos,&hd) ;
             hd.srcPos++ ;
         }
     }

@@ -368,32 +368,57 @@ windCurLineOffsetEval(meWindow *wp)
 #endif
     {
         register meUByte cc, *ss, *off ;
-        register int pos, ii ;
+        register int pos ;
+        register int idx, len ;
 
         ss = wp->dotLine->text ;
         off = wp->dotCharOffset->text ;
         pos = 0 ;
+        len = wp->dotLine->length ;
 #ifndef NDEBUG
-        if(wp->dotLine->text[wp->dotLine->length] != '\0')
+        if(wp->dotLine->text[len] != '\0')
         {
             _meAssert(__FILE__,__LINE__) ;
-            wp->dotLine->text[wp->dotLine->length] = '\0' ;
+            wp->dotLine->text[len] = '\0' ;
         }
 #endif
-        while((cc=*ss++) != 0)
+        idx = 0 ;
+        while(idx < len)
         {
+            cc = ss[idx] ;
             if(isDisplayable(cc))
-                ii = 1 ;
-            else if(cc == meCHAR_TAB)
-                ii = get_tab_pos(pos,wp->buffer->tabWidth) + 1;
-            else if (cc < 0x20)
-                ii = 2 ;
+            {
+                meUInt uc ;
+                unsigned bytes = meUtf8Decode(ss,idx,len,&uc) ;
+                unsigned bb ;
+
+                /* a multi-byte UTF-8 character is still one display
+                 * column: give it to the lead byte and let the
+                 * continuation bytes contribute nothing, so summing
+                 * this array up to any byte offset still gives the
+                 * true column of that offset */
+                off[idx] = 1 ;
+                for(bb=1 ; bb<bytes ; bb++)
+                    off[idx+bb] = 0 ;
+                pos += 1 ;
+                idx += bytes ;
+            }
             else
-                ii = 4 ;
-            *off++ = (meUByte) ii ;
-            pos += ii ;
+            {
+                int ii ;
+
+                if(cc == meCHAR_TAB)
+                    ii = get_tab_pos(pos,wp->buffer->tabWidth) + 1;
+                else if (cc < 0x20)
+                    ii = 2 ;
+                else
+                    ii = 4 ;
+                off[idx] = (meUByte) ii ;
+                pos += ii ;
+                idx++ ;
+            }
         }
-        *off = 0 ;
+        off[idx] = 0 ;
     }
 }
 
@@ -490,6 +515,7 @@ updCursor(register meWindow *wp)
                 disLineSize += 512 ;
             while(disLineSize < ((int) jj)) ;
             disLineBuff = meRealloc(disLineBuff,disLineSize+32) ;
+            disLineColOff = meRealloc(disLineColOff,(disLineSize+32)*sizeof(int)) ;
         }
     }
     switch(scrollFlag & 0x0f)
@@ -531,58 +557,220 @@ static char drawno = 'A' ;
  * renderLine
  * This function renders a non-hilighted text line.
  */
+/*
+ * Record that display column 'col' begins 'nbytes' bytes from 'byteStart'
+ * in disLineBuff, one entry per column. Every case below except the UTF-8
+ * multi-byte one writes exactly one byte per column, so the offsets are
+ * just byteStart, byteStart+1, ...; the multi-byte case is called with
+ * nbytes==1 since several bytes collapse into the single column they
+ * occupy on screen.
+ */
+static void
+fillColOff(int col, int byteStart, int byteEnd, int ncols)
+{
+    int kk ;
+
+    for(kk=0 ; kk<ncols ; kk++)
+        disLineColOff[col+kk] = byteStart+kk ;
+    disLineColOff[col+ncols] = byteEnd ;
+}
+
+static void
+ensureDisplayLine(int columns, int bytes)
+{
+    int need ;
+
+    need = columns + bytes + 1 ;
+    if (need <= disLineSize)
+        return ;
+    do
+        disLineSize += 512 ;
+    while (disLineSize < need) ;
+    disLineBuff = meRealloc(disLineBuff,disLineSize+32) ;
+    disLineColOff = meRealloc(disLineColOff,(disLineSize+32)*sizeof(int)) ;
+}
+
+int
+displayCharWidth(int col, const meUByte *src, int remaining, meUByte cc, int tw)
+{
+    if ((cc & 0xc0) == 0x80)
+        return 0 ;
+    if (isDisplayable(cc))
+    {
+        meUInt uc ;
+
+        (void) meUtf8Decode(src, 0, remaining, &uc) ;
+        return 1 ;
+    }
+    else if (cc == meCHAR_TAB)
+        return get_tab_pos(col, tw) + 1 ;
+    else if (cc < 0x20)
+        return 2 ;
+    else
+        return 4 ;
+}
+
+int
+displayPutChar(int col, const meUByte *src, int remaining, meUByte cc, int tw)
+{
+    int byteStart, byteEnd, bytes, cols ;
+
+    if ((cc & 0xc0) == 0x80)
+        return col ;
+    if (isDisplayable(cc))
+    {
+        meUInt uc ;
+
+        bytes = meUtf8Decode(src, 0, remaining, &uc) ;
+        cols = 1 ;
+        byteStart = (int) (disLineBuff + disLineColOff[col] - disLineBuff) ;
+        byteEnd = byteStart + bytes ;
+        ensureDisplayLine(col + cols, bytes) ;
+        fillColOff(col, byteStart, byteEnd, cols) ;
+        if ((bytes == 1) && (cc == ' '))
+            disLineBuff[byteStart] = displaySpace ;
+        else if ((bytes == 1) && (cc == meCHAR_TAB))
+            disLineBuff[byteStart] = displayTab ;
+        else
+            memcpy(disLineBuff + byteStart, src, bytes) ;
+        return col + cols ;
+    }
+    else if (cc == meCHAR_TAB)
+    {
+        int ii = get_tab_pos(col, tw) ;
+
+        bytes = ii + 1 ;
+        cols = bytes ;
+        byteStart = (int) (disLineBuff + disLineColOff[col] - disLineBuff) ;
+        byteEnd = byteStart + bytes ;
+        ensureDisplayLine(col + cols, bytes) ;
+        fillColOff(col, byteStart, byteEnd, cols) ;
+        disLineBuff[byteStart] = displayTab ;
+        while (--ii >= 0)
+            disLineBuff[byteStart + 1 + ii] = ' ' ;
+        return col + cols ;
+    }
+    else if (cc < 0x20)
+    {
+        bytes = 2 ;
+        cols = 2 ;
+        byteStart = (int) (disLineBuff + disLineColOff[col] - disLineBuff) ;
+        byteEnd = byteStart + bytes ;
+        ensureDisplayLine(col + cols, bytes) ;
+        fillColOff(col, byteStart, byteEnd, cols) ;
+        disLineBuff[byteStart] = '^' ;
+        disLineBuff[byteStart + 1] = cc ^ 0x40 ;
+        return col + cols ;
+    }
+    else
+    {
+        bytes = 4 ;
+        cols = 4 ;
+        byteStart = (int) (disLineBuff + disLineColOff[col] - disLineBuff) ;
+        byteEnd = byteStart + bytes ;
+        ensureDisplayLine(col + cols, bytes) ;
+        fillColOff(col, byteStart, byteEnd, cols) ;
+        disLineBuff[byteStart] = '\\' ;
+        disLineBuff[byteStart + 1] = 'x' ;
+        disLineBuff[byteStart + 2] = hexdigits[cc / 0x10] ;
+        disLineBuff[byteStart + 3] = hexdigits[cc % 0x10] ;
+        return col + cols ;
+    }
+}
+
 int
 renderLine (meUByte *s1, int len, int wid, meBuffer *bp)
 {
     register meUByte cc;
     register meUByte *s2 ;
 
-    s2 = disLineBuff + wid;
-    while(len-- > 0)
+    /* disLineColOff[wid] is where the *previous* renderLine call (if any -
+     * this function is called more than once per row when a selection
+     * splits it into several colour runs) left off in bytes; a multi-byte
+     * character before this run means that is not the same as 'wid' */
+    s2 = disLineBuff + (wid ? disLineColOff[wid] : 0) ;
+    while(len > 0)
     {
-        /* the largest character size is a tab which is user definable */
-        if (wid >= disLineSize)
-        {
-            disLineSize += 512 ;
-            disLineBuff = meRealloc(disLineBuff,disLineSize+32) ;
-            s2 = disLineBuff + wid ;
-        }
-        cc = *s1++ ;
+        int byteStart, byteEnd, bytes, cols ;
+
+        cc = *s1 ;
+        byteStart = (int) (s2 - disLineBuff) ;
         if(isDisplayable(cc))
         {
-            wid++ ;
-            if(cc == ' ')
+            meUInt uc ;
+
+            bytes = meUtf8Decode(s1,0,len,&uc) ;
+            cols = 1 ;
+            byteEnd = byteStart + bytes ;
+            ensureDisplayLine(wid + cols, bytes) ;
+            fillColOff(wid, byteStart, byteEnd, cols) ;
+            s2 = disLineBuff + byteStart ;
+            if((bytes == 1) && (cc == ' '))
                 *s2++ = displaySpace ;
-            else if(cc == meCHAR_TAB)
+            else if((bytes == 1) && (cc == meCHAR_TAB))
                 *s2++ = displayTab ;
             else
-                *s2++ = cc ;
+            {
+                unsigned bb ;
+                for(bb=0 ; bb<bytes ; bb++)
+                    *s2++ = s1[bb] ;
+            }
+            s1 += bytes ;
+            len -= (int) bytes ;
+            wid += cols ;
         }
         else if(cc == meCHAR_TAB)
         {
             int ii=get_tab_pos(wid,bp->tabWidth) ;
 
-            wid += ii+1 ;
+            bytes = ii + 1 ;
+            cols = bytes ;
+            byteEnd = byteStart + bytes ;
+            ensureDisplayLine(wid + cols, bytes) ;
+            fillColOff(wid, byteStart, byteEnd, cols) ;
+            s2 = disLineBuff + byteStart ;
             *s2++ = displayTab ;
             while(--ii >= 0)
                 *s2++ = ' ' ;
+            s1++ ;
+            len-- ;
+            wid += cols ;
         }
         else if(cc < 0x20)
         {
-            wid += 2 ;
+            bytes = 2 ;
+            cols = 2 ;
+            byteEnd = byteStart + bytes ;
+            ensureDisplayLine(wid + cols, bytes) ;
+            fillColOff(wid, byteStart, byteEnd, cols) ;
+            s2 = disLineBuff + byteStart ;
             *s2++ = '^' ;
             *s2++ = cc ^ 0x40 ;
+            s1++ ;
+            len-- ;
+            wid += cols ;
         }
         else
         {
             /* Its a nasty character */
-            wid += 4 ;
+            bytes = 4 ;
+            cols = 4 ;
+            byteEnd = byteStart + bytes ;
+            ensureDisplayLine(wid + cols, bytes) ;
+            fillColOff(wid, byteStart, byteEnd, cols) ;
+            s2 = disLineBuff + byteStart ;
             *s2++ = '\\' ;
             *s2++ = 'x' ;
             *s2++ = hexdigits[cc/0x10] ;
             *s2++ = hexdigits[cc%0x10] ;
+            s1++ ;
+            len-- ;
+            wid += cols ;
         }
     }
+    /* one past the end, so a caller asking for the byte offset of the
+     * (non-existent) column just past the last one gets somewhere sane */
+    disLineColOff[wid] = (int) (s2 - disLineBuff) ;
     return wid;
 }
 
@@ -598,6 +786,15 @@ updateline(register int row, register meVideoLine *vp1, meWindow *window)
     meUShort noColChng;         /* Number of colour changes */
     meUShort scol;              /* Lines starting column */
     meUShort ncol;              /* Lines number of columns */
+    meUShort scroll=0;          /* Horizontal scroll amount - needed again
+                                 * below to turn a column relative to the
+                                 * (maybe scrolled) display back into an
+                                 * absolute one for a disLineColOff lookup */
+    int haveColOff=0;           /* true only once renderLine() has actually
+                                 * populated disLineColOff for this row - the
+                                 * mode/menu line and the (separate, still
+                                 * byte-per-column) syntax-hilighted line path
+                                 * below never call it, so it stays stale */
 
     /* Get column size/offset */
     s1 = vp1->line->text;
@@ -660,6 +857,7 @@ updateline(register int row, register meVideoLine *vp1, meWindow *window)
 #if MEOPT_HILIGHT
 hideLineJump:
 #endif
+            haveColOff = 1 ;
             blkp = hilBlock + 1 ;
             lineLen = vp1->line->length;
 
@@ -738,8 +936,6 @@ hideLineJump:
 
         s1 = disLineBuff ;
         {
-            register meUShort scroll ;
-
             if (flag & VFCURRL)
                 scroll = window->horzScroll ;   /* Current line scroll */
             else
@@ -757,7 +953,15 @@ hideLineJump:
                  * we do not insert a dollar where not required. */
                 if (blkp->column > 0)
                 {
-                    s1 += scroll ;
+                    /* Land on the last byte of whatever occupies the first
+                     * visible column.  For a multi-byte character this leaves
+                     * its leading bytes unread, which is harmless here: nothing
+                     * scans backwards and the truncation marker replaces that
+                     * byte; the following column starts at the next byte. */
+                    if(haveColOff)
+                        s1 = disLineBuff + disLineColOff[scroll+1] - 1 ;
+                    else
+                        s1 += scroll ;
                     while((blkp->column <= scroll))
                     {
                         if(noColChng == 1)
@@ -792,7 +996,18 @@ hideLineJump:
                 /* remove the fonts as these can effect the next char which will probably be the scroll bar */
                 scheme = meSchemeSetNoFont(scheme) ;
             }
-            s1[ncol-1] = windowChars[WCDISPTXTRIG] ;
+            /* 'ncol-1' is relative to any horizontal scroll already
+             * applied above; disLineColOff is indexed by absolute column,
+             * so add 'scroll' back in. Overwriting the first byte of
+             * whatever occupies that column is enough even when it is a
+             * multi-byte character: the output loop below counts columns
+             * by UTF-8 lead bytes and stops as soon as it has written this
+             * one, so any trailing bytes of the character it replaced are
+             * never reached. */
+            if(haveColOff)
+                disLineBuff[disLineColOff[scroll+ncol-1]] = windowChars[WCDISPTXTRIG] ;
+            else
+                s1[ncol-1] = windowChars[WCDISPTXTRIG] ;
             blkp[noColChng].column = ncol ;
             blkp[noColChng].scheme = scheme | (blkp[noColChng-1].scheme & (meSCHEME_CURRENT|meSCHEME_SELECT)) ;
             noColChng++ ;
@@ -801,10 +1016,20 @@ hideLineJump:
         {
             /* An extra space is added to the last column so that
              * the cursor will be the right colour */
-            if(vp1->line != window->buffer->baseLine)
-                s1[blkp[noColChng-1].column] = displayNewLine ;
+            if(haveColOff)
+            {
+                if(vp1->line != window->buffer->baseLine)
+                    disLineBuff[disLineColOff[scroll+blkp[noColChng-1].column]] = displayNewLine ;
+                else
+                    disLineBuff[disLineColOff[scroll+blkp[noColChng-1].column]] = ' ' ;
+            }
             else
-                s1[blkp[noColChng-1].column] = ' ' ;
+            {
+                if(vp1->line != window->buffer->baseLine)
+                    s1[blkp[noColChng-1].column] = displayNewLine ;
+                else
+                    s1[blkp[noColChng-1].column] = ' ' ;
+            }
             if(meSchemeTestStyleHasFont(blkp[noColChng-1].scheme))
             {
                 /* remove the fonts as these can effect the next char which will probably be the scroll bar */
@@ -870,11 +1095,33 @@ hideLineJump:
 
             /* Output the character in the specified colour.
              * Maintain the frame store */
-            for(ii = blkp->column ; col<ii ; col++)
+            /* A UTF-8 character can be several bytes but is only one
+             * column: send every byte to the terminal, but only advance
+             * col/fssp/fstp (which are one-per-column, sized for the
+             * window width) on the lead byte of each one. */
+            if(haveColOff)
             {
-                *fssp++ = scheme;
-                *fstp++ = *s1;
-                TCAPputc(*s1++) ;
+                for(ii = blkp->column ; col<ii ; )
+                {
+                    meUByte cc = *s1++ ;
+
+                    TCAPputc(cc) ;
+                    if(meUtf8IsLead(cc))
+                    {
+                        *fssp++ = scheme;
+                        *fstp++ = cc;
+                        col++ ;
+                    }
+                }
+            }
+            else
+            {
+                for(ii = blkp->column ; col<ii ; col++)
+                {
+                    *fssp++ = scheme;
+                    *fstp++ = *s1;
+                    TCAPputc(*s1++) ;
+                }
             }
             blkp++;
         }
@@ -912,7 +1159,7 @@ hideLineJump:
         /********************************************************************
          * X-WINDOWS / COCOA                                                *
          ********************************************************************/
-        register int ii, len, col, cno ;
+        register int ii, len, col, cno, byteStart ;
         register meScheme scheme ;
 
         row = rowToClient(row) ;
@@ -938,6 +1185,7 @@ hideLineJump:
                  * replaced with the correct chars */
                 while (--len >= 0)
                 {
+                    byteStart = col ;
                     *fssp++ = scheme;
                     if(((cc=s1[col++]) & 0xe0) == 0)
                     {

@@ -150,6 +150,7 @@ meInit(meUByte *bname)
     styleTable = meMalloc(2*meSCHEME_STYLES*sizeof(meStyle)) ;
     hilBlock = meMalloc((hilBlockS+2)*sizeof(meSchemeSet)) ;
     disLineBuff = meMalloc((disLineSize+32)*sizeof(meUByte)) ;
+    disLineColOff = meMalloc((disLineSize+32)*sizeof(int)) ;
 
     memcpy(styleTable,defaultScheme,2*meSCHEME_STYLES*sizeof(meStyle));
     /* Set the fore and back colours */
@@ -718,6 +719,7 @@ exitEmacs(int f, int n)
             meNullFree(colTable) ;
 #endif
             meNullFree(disLineBuff) ;
+            meNullFree(disLineColOff) ;
             meNullFree(searchPath) ;
             meNullFree(homedir) ;
             meNullFree(curdir) ;

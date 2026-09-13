@@ -7,3 +7,8 @@ CMakeCache.txt
 /build/
 *.app/
 .DS_Store
+CTestTestfile.cmake
+DartConfiguration.tcl
+/Testing/
+/tests/*.o
+/tests/test_utf8_tcap

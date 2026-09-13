@@ -1102,8 +1102,10 @@ typedef struct meVideo
 
 typedef struct
 {
-    meUByte           *text ;                   /* Text held on the line. */
+    meUByte           *text ;                   /* Text held on the line, in display-byte order. */
     meScheme          *scheme ;                 /* index to the Style (fore + back + font) of each cell */
+    int               *colOff ;                 /* byte offset into text for each display column */
+    int                textMax ;                /* allocated bytes in text */
 } meFrameLine;                                  /* Line of screen text */
 
 

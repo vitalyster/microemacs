@@ -59,6 +59,65 @@ meFrameEnlargeVideo(meFrame *frame, int rows)
     return (meTRUE);
 }
 
+static void
+frameLineFree(meFrameLine *flp)
+{
+    meFree (flp->text) ;
+    meFree (flp->scheme) ;
+    meFree (flp->colOff) ;
+}
+
+static int
+frameLineInit(meFrameLine *flp, int width, meScheme scheme)
+{
+    int ii ;
+
+    flp->text = NULL ;
+    flp->scheme = NULL ;
+    flp->colOff = NULL ;
+    flp->textMax = 0 ;
+    flp->text = meMalloc((size_t) width * 4 + 1) ;
+    flp->scheme = meMalloc((size_t) width * sizeof(*flp->scheme)) ;
+    flp->colOff = meMalloc((size_t) (width + 1) * sizeof(*flp->colOff)) ;
+    if (flp->text == NULL || flp->scheme == NULL || flp->colOff == NULL)
+    {
+        frameLineFree(flp) ;
+        return meFALSE ;
+    }
+
+    flp->textMax = width * 4 ;
+    for (ii = 0 ; ii < width ; ii++)
+    {
+        flp->text[ii] = ' ' ;
+        flp->scheme[ii] = scheme ;
+        flp->colOff[ii] = ii ;
+    }
+    flp->colOff[width] = width ;
+    return meTRUE ;
+}
+
+static int
+frameLineGrow(meFrameLine *old, meFrameLine *new, int oldWidth, int newWidth)
+{
+    int oldEnd ;
+    int jj ;
+
+    oldEnd = old->colOff[oldWidth] ;
+    if (oldEnd > new->textMax)
+        return meFALSE ;
+    memcpy(new->text, old->text, oldEnd) ;
+    memcpy(new->colOff, old->colOff, (oldWidth + 1) * sizeof(*new->colOff)) ;
+    for (jj = oldWidth ; jj < newWidth ; jj++)
+    {
+        int pos = oldEnd + (jj - oldWidth) ;
+        new->text[pos] = ' ' ;
+        new->scheme[jj] = globScheme ;
+        new->colOff[jj] = pos ;
+    }
+    new->colOff[newWidth] = oldEnd ;
+    return meTRUE ;
+}
+
 
 int
 meFrameChangeWidth(meFrame *frame, int ww)
@@ -86,41 +145,36 @@ meFrameChangeWidth(meFrame *frame, int ww)
          * mode lines */
         meWindow *wp ;                /* Temporary window pointer */
         meFrameLine *flp;             /* Frame line pointer */
-        meFrameLine fl;               /* Temporary frame line */
         int ii, jj;                   /* Local loop counters */
         meLine *ml ;
         meUByte *mls ;
+        meFrameLine *newStore ;
 
         if(((ml = meLineMalloc(ww,0)) == NULL) ||
            ((mls = meMalloc(ww+1)) == NULL))
             return meFALSE ;
-            
-        /* Fix up the frame store by growing the lines. Do a safe
-         * grow where by we can recover if a malloc fails. */
+
+        /* Grow the frame store before touching the window structures. */
+        newStore = meMalloc(sizeof(*newStore) * loopFrame->depthMax) ;
+        if (newStore == NULL)
+            return meFALSE ;
         for (flp = loopFrame->store, ii = 0; ii < loopFrame->depthMax; ii++, flp++)
         {
-            if ((fl.scheme = meMalloc(ww*(sizeof(meUByte)+sizeof(meStyle)))) == NULL)
-                return meFALSE ;
-            fl.text = (meUByte *) (fl.scheme+ww) ;
-            
-            /* Data structures allocated. Copy accross the new screen
-             * information and pad endings with valid data. Strictly we
-             * do not need to do this for all platforms, however if it
-             * is safer if we make sure the data is valid. Resize is an
-             * infrequent operation and time is not critical here */
-            memcpy(fl.text, flp->text, sizeof(meUByte) * loopFrame->widthMax);
-            memcpy(fl.scheme, flp->scheme, sizeof(meScheme) * loopFrame->widthMax);
-            jj = ww ;
-            while(--jj >= loopFrame->widthMax)
+            if (!frameLineInit(newStore + ii, ww, globScheme) ||
+                !frameLineGrow(flp, newStore + ii, loopFrame->widthMax, ww))
             {
-                fl.text[jj] = ' ' ;
-                fl.scheme[jj] = globScheme ;
-            }                
-            /* Free off old data and copy in new */
-            meFree (flp->scheme);
-            flp->text = fl.text;
-            flp->scheme = fl.scheme;
+                for (jj = 0; jj < loopFrame->depthMax; jj++)
+                    frameLineFree(newStore + jj) ;
+                meFree(newStore) ;
+                return meFALSE ;
+            }
         }
+        for (flp = loopFrame->store, ii = 0; ii < loopFrame->depthMax; ii++, flp++)
+            frameLineFree(flp) ;
+        meFree(loopFrame->store) ;
+        loopFrame->store = newStore ;
+        loopFrame->widthMax = ww ;
+
         /* Fix up the window structures */
         memcpy(ml,loopFrame->mlLine,meLINE_SIZE+loopFrame->mlLine->length) ;
         if(loopFrame->mlStatus & MLSTATUS_KEEP)
@@ -131,12 +185,12 @@ meFrameChangeWidth(meFrame *frame, int ww)
         }
         else if(loopFrame->mlStatus & MLSTATUS_RESTORE)
             meStrcpy(mls,loopFrame->mlLineStore) ;
-        
+
         free(loopFrame->mlLine) ;
         free(loopFrame->mlLineStore) ;
         loopFrame->video.lineArray[loopFrame->depth].line = (loopFrame->mlLine = ml) ;
         loopFrame->mlLineStore = mls ;
-        
+
         wp = loopFrame->windowList ;
         while(wp != NULL)
         {
@@ -147,7 +201,6 @@ meFrameChangeWidth(meFrame *frame, int ww)
             wp->modeLine = ml ;
             wp = wp->next ;
         }
-        loopFrame->widthMax = ww ;
     }
 
     loopFrame->width = ww ;
@@ -194,38 +247,32 @@ meFrameChangeDepth(meFrame *frame, int dd)
     {
         meFrameLine *flp;             /* Temporary frame line */
         int ii, jj;                 /* Local loop counter */
-        
+        meFrameLine *newStore ;
+
+        /* Grow the frame store first. Reallocate and then
+         * copy across the old information. */
+        newStore = meMalloc(sizeof(*newStore) * dd) ;
+        if (newStore == NULL)
+            return meFALSE ;
+        memcpy(newStore, loopFrame->store, sizeof(*newStore) * loopFrame->depthMax);
         if (meFrameEnlargeVideo(loopFrame,dd) == meFALSE)
-            return meFALSE ;
-            
-        /* Grow the Frame store depthwise do this safely so that 
-         * we do not cause a crash at the video end. 
-         *
-         * Grow the frame store first. Reallocate and then
-         * copy across the old information. 
-         */
-        if ((flp = (meFrameLine *) meMalloc (sizeof (meFrameLine) * dd)) == NULL)
-            return meFALSE ;
-        
-        memcpy (flp, loopFrame->store, sizeof (meFrameLine) * loopFrame->depthMax);
-        meFree (loopFrame->store);        /* Free off old store */
-        loopFrame->store = flp;           /* Re-assign */
-        
-        /* Allocate a new set of lines for the remainder of the space */
-        for (flp += loopFrame->depthMax, ii = loopFrame->depthMax; ii < dd; ii++, flp++)
         {
-            if ((flp->scheme = meMalloc(loopFrame->widthMax*(sizeof(meUByte)+sizeof(meScheme)))) == NULL)
-                return meFALSE ;
-            
-            flp->text = (meUByte *) (flp->scheme+loopFrame->widthMax) ;
-            /* Initialise the data to something valid */
-            jj = loopFrame->widthMax ;
-            while(--jj >= 0)
+            meFree(newStore) ;
+            return meFALSE ;
+        }
+
+        for (flp = newStore + loopFrame->depthMax, ii = loopFrame->depthMax; ii < dd; ii++, flp++)
+        {
+            if (!frameLineInit(flp, loopFrame->widthMax, globScheme))
             {
-                flp->text[jj] = ' ' ;
-                flp->scheme[jj] = globScheme ;
+                for (jj = loopFrame->depthMax; jj < dd; jj++)
+                    frameLineFree(newStore + jj) ;
+                meFree(newStore) ;
+                return meFALSE ;
             }
         }
+        meFree(loopFrame->store);        /* Free off old store */
+        loopFrame->store = newStore;           /* Re-assign */
         loopFrame->depthMax = dd ;
     }
 
@@ -414,15 +461,13 @@ meFrameInit(meFrame *sibling)
         return NULL ;
     for (flp = frame->store, ii = 0; ii < frame->depthMax; ii++, flp++)
     {
-        if ((flp->scheme = meMalloc(frame->widthMax*(sizeof(meUByte)+sizeof(meStyle)))) == NULL)
-            return NULL ;
-        flp->text = (meUByte *) (flp->scheme+frame->widthMax) ;
-        /* Fill with data */
-        jj = frame->widthMax ;
-        while(--jj >= 0)
+        if (!frameLineInit(flp, frame->widthMax, meSCHEME_NDEFAULT))
         {
-            flp->text[jj] = ' ' ;
-            flp->scheme[jj] = meSCHEME_NDEFAULT ;
+            for (jj = 0; jj < frame->depthMax; jj++)
+                frameLineFree(frame->store + jj) ;
+            meFree(frame->store) ;
+            frame->store = NULL ;
+            return NULL ;
         }
     }
     return frame ;
@@ -523,7 +568,7 @@ meFrameFree(meFrame *frame)
     }
     meFree(frame->video.lineArray);
     for(flp=frame->store,ii=0; ii<frame->depthMax; ii++, flp++)
-        meFree(flp->scheme) ;
+        frameLineFree(flp) ;
     meFree(frame->mlLine) ;
     meFree(frame->mlLineStore) ;
     meFree(frame->store) ;

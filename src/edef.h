@@ -366,6 +366,11 @@ extern meFrame *frameCur ;
 
 extern meUByte *disLineBuff ;           /* interal display buffer array */
 extern int      disLineSize ;           /* interal display buffer size  */
+extern int     *disLineColOff ;         /* disLineBuff byte offset of each
+                                          * display column - a UTF-8 char can
+                                          * be several bytes but is always one
+                                          * column, so this is the only way to
+                                          * turn a column back into an offset */
 
 /* uninitialized global external declarations */
 extern meUByte    resultStr[meBUF_SIZE_MAX] ;   /* $result variable             */
@@ -810,6 +815,7 @@ meFrame *frameFocus=NULL ;
 meFrame *frameCur=NULL ;
 
 meUByte   *disLineBuff=NULL ;           /* interal display buffer array */
+int       *disLineColOff=NULL ;         /* disLineBuff byte offset of each display column */
 int        disLineSize=512 ;            /* interal display buffer size  */
 
 int       curgoal;                      /* Goal for C-P, C-N            */
